@@ -10,6 +10,7 @@ public:
 	BigIntegerString() : m_sign(0), m_value("0") {}
 
 	BigIntegerString(int value) {
+		
 		if (value == 0) {
 			m_sign = 0;
 			m_value = "0";
