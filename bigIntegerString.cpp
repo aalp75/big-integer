@@ -51,10 +51,10 @@ int main() {
 	b1.print();
 	BigIntegerString b2(42);
 	b2.print();
-	BigIntegerString b3("21432"); 
+	BigIntegerString b3("21432");   
 	b3.print();
 	BigIntegerString b4("-1241243");
-	b4.print();
+	b4.print(); 
 	bigIntegerString b5(33);
 	b5.print();
 
