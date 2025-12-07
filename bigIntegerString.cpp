@@ -58,5 +58,7 @@ int main() {
 	bigIntegerString b5(33);
 	b5.print();
 
+	cout << "Done\n";
+
 	return 0;
 }
