@@ -55,8 +55,8 @@ int main() {
 	b3.print();
 	BigIntegerString b4("-1241243");
 	b4.print();
-
-	
+	bigIntegerString b5(33);
+	b5.print();
 
 	return 0;
 }
