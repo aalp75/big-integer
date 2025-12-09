@@ -250,15 +250,54 @@ BigInteger multiplicationAbsolute(BigInteger& x, BigInteger& y) {
 	return BigInteger(input);
 }
 
-/** Knuth algorithm
+/* Knuth algorithm
  * 
-**/
+ * Division of u / v, e.g. 15 / 4 = {3, 2} because 15 = 4 * 3 + 2
+ * 
+*/	
 
-BigInteger divideAndRemainder(BigInteger& x, BigInteger& y) {
-	std::vector<long long> input;
+std::pair<BigInteger, BigInteger> divideAndRemainder(BigInteger& u, BigInteger& v) {
+	std::vector<long long> quotient(u.numberOfDigits + v.numberOfDigits, 0);
+
+	vector<uint32_t> u = u.m_digits();
+	vector<uint32_t> v = v.m_digits();
+
+	// D1 [Normalize] Ensure that v_{n - 1} > BASE / 2
+	if (v.m_digits[0] < BASE / 2) {
+		u = multiplication(u, BigInteger(BASE / 2));
+		v = multiplication(v, BigInteger(BASE / 2));
+	}
+
+	vector<int> v_truncated = v.m_digits;
+	v_truncated[0] = 0;
+
+	// D2 [Initialization]
+	int n = v.numberOfDigits();
+	int m = u.numberOfDigits() - n;
+	std::cout << "m = " << m << '\n';
+	for (int j = 0; j < m; j++) {
+		// D3 [Calculate q_hat]
+		long long q_hat = (u.m_digits[j] * BASE + u.m_digits[j + 1]) / v.m_digits[0];
+		long long r_hat = (u.m_digits[j] * BASE + u.m_digits[j + 1]) 
+		if (q_hat >= BASE or q_hat * v.m_digits[1] >= BASE * r_hat + u.m_digits[j + 2]) {
+			q_hat -= 1
+			r_hat += v.m_digits[1];
+		}
+
+		// D4 [Multiply and substract]
 
 
-	return BigInteger(input);
+		// D5 [Test Remainder]
+
+		// D6 [Add Back]
+
+		// D7 [Loop on j]
+	}
+
+	// D8 [Unormalize]
+
+
+	return {BigInteger(quotient), BigInteger(remainder)}
 }
 
 

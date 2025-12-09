@@ -1,5 +1,15 @@
-C++ class for large integer (no limit of length)
+C++ class for large integer (limit is the RAM)
 
- 2 classes:
+2 classes:
  - BigIntegerString: it stores the number as a string
  - BigInteger: stores the number as an array representating the 2^32 base
+
+Examples:
+
+BigInteger b1("314159265358979323846264338327950288419716939937510");
+BigInteger b2("57721566490153286060651209008240");
+
+BigInteger b3 = b1 + b2; // 314159265358979323903985904818103574480368148945750
+BigInteger b4 = b1 - b2; // 314159265358979323788542771837797002359065730929270
+BigInteger b5 = b1 * b2; // 18133764923916034996131345312710323817634758445161466273272003379428833534675082400
+BigInteger b6 = b1 / b2; // 5442667004066352026
