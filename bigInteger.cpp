@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include "debug.h"
 
 const static long long SHIFT = 32;
 const static long long BASE = 1ll << SHIFT;
@@ -34,8 +35,16 @@ public: // for now everything is public
 		m_digits.push_back(val & BASE_MASK);
 	}
 
+	BigInteger(unsigned long long val) {
+		m_sign = 1;
+		if ((val >> 32) > 0) {
+			m_digits.push_back(val >> 32);	
+		}
+		m_digits.push_back(val & BASE_MASK);
+	}
+
 	BigInteger(std::string s) {
-		std::cout << "Constructor form string\n";
+		//std::cout << "Constructor form string\n";
 		m_sign = 1;
 		long long sum = 0;
 		int n = s.size();
@@ -71,13 +80,17 @@ public: // for now everything is public
 	template <typename T>
 	BigInteger(const std::vector<T>& input) {
 		m_sign = 1;
-		m.digits.clear();
+		m_digits.clear();
 		std::size_t i = 0;
 		for (i; i < input.size(); i++) {
 			if (input[i] != 0) break;
 		}
 		for (i; i < input.size(); i++) {
 			m_digits.push_back(static_cast<uint32_t>(input[i]));
+		}
+
+		if (m_digits.size() == 0) {
+			m_sign = 0;
 		}
 	}
 
@@ -97,6 +110,9 @@ public: // for now everything is public
 	}
 
 	std::string toString() const {
+		if (m_sign == 0) {
+			return "0";
+		}
 		std::string result;
 
 		result += "m_digits = ";
@@ -109,7 +125,7 @@ public: // for now everything is public
 			p--;
 		}
 
-		std::cout << result << '\n';
+		//std::cout << result << '\n';
 		
 		result = std::to_string(m_digits[0]);
 
@@ -136,14 +152,11 @@ public: // for now everything is public
 
 		std::reverse(res.begin(), res.end());
 
-		result = "";
+		result.clear();
 
-		std::cout << "result: " << '\n';
 		for (auto e : res) {
-			std::cout << e << " ";
 			result += std::to_string(e);
 		}
-		std::cout << '\n';
 
 		return result;
 	}
@@ -191,7 +204,7 @@ BigInteger additionAbsolute(BigInteger& x, BigInteger y) {
 }
 
 // here we suppose that x >= y
-BigInteger substractionAbsolute(BigInteger& x, BigInteger& y) {
+BigInteger substractionAbsolute(BigInteger x, BigInteger y) {
 	std::vector<long long> input;
 
 	int i = x.m_digits.size() - 1;
@@ -225,7 +238,7 @@ BigInteger substractionAbsolute(BigInteger& x, BigInteger& y) {
 	return BigInteger(input);
 }
 
-BigInteger multiplicationAbsolute(BigInteger& x, BigInteger& y) {
+BigInteger multiplicationAbsolute(BigInteger x, BigInteger y) {
 
     int nx = x.numberOfDigits();
     int ny = y.numberOfDigits();
@@ -235,7 +248,6 @@ BigInteger multiplicationAbsolute(BigInteger& x, BigInteger& y) {
     unsigned long long carry = 0;
 
     for (int i = nx - 1; i >= 0; --i) {
-    	std::cout << "i = " << i << '\n';
         for (int j = ny - 1; j >= 0; --j) {
             int k = i + j + 1;
 			unsigned long long val = (unsigned long long)x.m_digits[i] * (unsigned long long)y.m_digits[j] + carry;
@@ -250,6 +262,28 @@ BigInteger multiplicationAbsolute(BigInteger& x, BigInteger& y) {
 	return BigInteger(input);
 }
 
+
+// helper for the knuth algorithm
+
+bool isGreaterOrEqual(BigInteger b1, BigInteger b2) {
+	if (b1.m_digits.size() > b2.m_digits.size()) {
+		return true;
+	}
+	if (b1.m_digits.size() < b2.m_digits.size()) {
+		return false;
+	}
+
+	for (int i = 0; i < b1.m_digits.size(); i++) {
+		if (b1.m_digits[i] > b2.m_digits[i]) {
+			return true;
+		}
+		if (b1.m_digits[i] < b2.m_digits[i]) {
+			return false;
+		}
+	}
+	return true;
+}
+
 /* Knuth algorithm
  * 
  * Division of u / v, e.g. 15 / 4 = {3, 2} because 15 = 4 * 3 + 2
@@ -257,47 +291,103 @@ BigInteger multiplicationAbsolute(BigInteger& x, BigInteger& y) {
 */	
 
 std::pair<BigInteger, BigInteger> divideAndRemainder(BigInteger& u, BigInteger& v) {
-	std::vector<long long> quotient(u.numberOfDigits + v.numberOfDigits, 0);
+	std::vector<unsigned long long> quotient;
 
-	vector<uint32_t> u = u.m_digits();
-	vector<uint32_t> v = v.m_digits();
-
-	// D1 [Normalize] Ensure that v_{n - 1} > BASE / 2
-	if (v.m_digits[0] < BASE / 2) {
-		u = multiplication(u, BigInteger(BASE / 2));
-		v = multiplication(v, BigInteger(BASE / 2));
+	if (u.numberOfDigits() == 1 && v.numberOfDigits() == 1) {
+		int q = u.m_digits[0] / v.m_digits[0];
+		int r =  u.m_digits[0] % v.m_digits[0];
+		return {BigInteger(q), BigInteger(r)};
 	}
 
-	vector<int> v_truncated = v.m_digits;
-	v_truncated[0] = 0;
-
-	// D2 [Initialization]
 	int n = v.numberOfDigits();
 	int m = u.numberOfDigits() - n;
-	std::cout << "m = " << m << '\n';
+
+	debug(n, m);
+
+	debug(u.m_digits);
+	debug(v.m_digits);
+
+	// D1 [Normalize] Ensure that v_{n - 1} > BASE / 2
+	// let's say that this part is true for now
+	//if (v.m_digits[0] < BASE / 2) {
+		//u = multiplication(u, BigInteger(BASE / 2));
+		//v = multiplication(v, BigInteger(BASE / 2));
+	//}
+
+	vector<uint32_t> currv;
+	for (int i = 0; i < n; i++) {
+		currv.push_back(u.m_digits[i]);
+	}
+
+	BigInteger curr(currv);
+
+	// D2 [Initialization]
 	for (int j = 0; j < m; j++) {
+		std::cout << "j = " << j << '\n';
+		curr.m_digits.push_back(u.m_digits[n + j]);
+		debug(curr.m_digits);
+		std::cout << "new curr: " << curr << '\n';
+
 		// D3 [Calculate q_hat]
-		long long q_hat = (u.m_digits[j] * BASE + u.m_digits[j + 1]) / v.m_digits[0];
-		long long r_hat = (u.m_digits[j] * BASE + u.m_digits[j + 1]) 
-		if (q_hat >= BASE or q_hat * v.m_digits[1] >= BASE * r_hat + u.m_digits[j + 2]) {
-			q_hat -= 1
-			r_hat += v.m_digits[1];
+		// q_hat is the initial guess. from the Theroem B: q_hat - 2 <= q <= q_hat
+		unsigned long long q_hat = (curr.m_digits[0] * BASE + curr.m_digits[1]) / v.m_digits[0];
+		unsigned long long r_hat = (curr.m_digits[0] * BASE + curr.m_digits[1]) % v.m_digits[0];
+
+		std::cout << "q_hat = " << q_hat << '\n';
+		std::cout << "r_hat = " << r_hat << '\n';
+
+		long long adj = 0;
+		if (curr.m_digits.size() >= 3) {
+			adj = curr.m_digits[2];
 		}
 
-		// D4 [Multiply and substract]
+		while (q_hat >= BASE || q_hat * v.m_digits[1] >= (BASE * r_hat + adj)) {
+			std::cout << "do an adjust\n";
+			q_hat -= 1;
+			r_hat += v.m_digits[0];
+			if (r_hat >= BASE) break;
+		}
 
+
+		std::cout << "After adjustment: \n";
+		std::cout << "q_hat = " << q_hat << '\n';
+		std::cout << "r_hat = " << r_hat << '\n';
+
+		// D4 [Multiply and substract]
+		BigInteger sub = multiplicationAbsolute(BigInteger(q_hat), v);
+		std::cout << "sub : " << sub << '\n';
+
+		debug(curr.m_digits);
+		debug(sub.m_digits);
+
+		std::cout << "curr : " << curr << '\n';
 
 		// D5 [Test Remainder]
-
-		// D6 [Add Back]
+		if (isGreaterOrEqual(curr, sub)) {
+			std::cout << "It's greater so I can multiply\n";
+			std::cout << curr << " - " << sub << " = " << substractionAbsolute(curr, sub) << '\n';
+			curr = substractionAbsolute(curr, sub);
+			std::cout << "curr : " << curr << '\n';
+			debug(curr.m_digits);
+			quotient.push_back(q_hat);
+		}
+		else { // D6 [Add Back]
+			// this step is very rare, it only appends with probabably 1 / (2 ^ 31)
+			std::cout << "PROBLEM!! It becomes negative so I need to handle carefully\n";
+			quotient.push_back(q_hat - 1);
+			curr = additionAbsolute(curr, v);
+			curr = substractionAbsolute(curr, sub);
+		}
 
 		// D7 [Loop on j]
 	}
 
 	// D8 [Unormalize]
+	debug(quotient);
 
+	BigInteger remainder(curr);
 
-	return {BigInteger(quotient), BigInteger(remainder)}
+	return {BigInteger(quotient), remainder};
 }
 
 
@@ -346,11 +436,18 @@ int main() {
 	//BI b9 = substractionAbsolute(b7, b6);
 	//std::cout << b9 << '\n';
 
-	std::cout << "** Performing multiplication **\n";
-	BI b10 = multiplicationAbsolute(b6, b7);
-	std::cout << b10 << '\n';
+	//std::cout << "** Performing multiplication **\n";
+	//BI b10 = multiplicationAbsolute(b6, b7);
+	//std::cout << b10 << '\n';
 
-	std::cout << "Perfom division\n";
+	std::cout << "** RUN DIVISION **\n";
+	BI b11("1287412847218478217421874821482174892174821743812748127481897214893712743182741827489217430812743");
+	BI b12("1284321849218409128491284091284128491824901284019284912843");
+
+	auto [q, r] = divideAndRemainder(b11, b12);
+
+	std::cout << "q = " << q << '\n';
+	std::cout << "r = " << r << '\n';
 
 	return 0;
 }
