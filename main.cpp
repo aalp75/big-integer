@@ -1,8 +1,19 @@
-#include <iostream>
-#include "bigInteger.h"
+#include<iostream>
+#include<vector>
+#include"bigInteger.h"
+
+
+using BI = BigInteger;
 
 
 int main() {
+
+	BI b1(2);
+	BI b2(3);
+
+	BI b3 = b1 + b2;
+	std::cout << b3 << '\n';
+	return 0;
 
 	/*int x = 4213;
 	BI b1(x);
@@ -60,19 +71,22 @@ int main() {
 	//std:cout << "q = " << q << '\n';
 	//std::cout << "r = " << r << '\n';
 
-	std::cout << "** RUN DIVISION **\n";
-	BI b11("340282366920938463463374607431768211456");
-	BI b12("18446744073709551616");
+	//std::cout << "** RUN DIVISION **\n";
+	//BI b11("340282366920938463463374607431768211456");
+	//BI b12("18446744073709551616");
+
+	//BI b11("730750818665451459101842416358141509827966271488");
+	//BI b12("39614081257132168796771975168");
 
 	//BI b11("140143607691181373357373357406387550411018827911774091176114398363648");
 	//BI b12("15624580915668123648");
 
 	//debug(b12.m_digits);
 	//return 0;
-	auto [q2, r2] = divideAndRemainder(b11, b12);
+	//auto [q2, r2] = divideAndRemainder(b11, b12);
 
-	std::cout << "q = " << q2 << '\n';
-	std::cout << "r = " << r2 << '\n';
+	//std::cout << "q = " << q2 << '\n';
+	//std::cout << "r = " << r2 << '\n';
 
-	return 0;
+	//return 0;
 }

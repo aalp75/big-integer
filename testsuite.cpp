@@ -2,19 +2,23 @@
 #include <string>
 #include "bigInteger.h"
 
+const char* GREEN = "\033[32m";
+const char* RED   = "\033[31m";
+const char* RESET = "\033[0m";
+
 static int TEST_PASSED = 0;
 static int TEST_TOTAL = 0;
 
-void expectEqual(const string& result, const string& expected, const string& testName) {
+void expectEqual(const std::string& result, const std::string& expected, const std::string& testName) {
 	TEST_TOTAL++;
     if (result != expected) {
-        std::cerr << "[FAIL] " << testName
+        std::cerr << RED << "[FAIL]" << RESET << " " << testName
                   << "\n  expected: " << expected
                   << "\n  result     : " << result << "\n";
         std::exit(1);
     } 
     else {
-        std::cout << "[OK]   " << testName << '\n';
+        std::cout << GREEN << "[OK]" << RESET << "   " << testName << '\n';
         TEST_PASSED++;
     }
 }
@@ -69,8 +73,8 @@ void testAddition() {
 	for (auto input : inputs) {
 		BigInteger u(input[0]);
 		BigInteger v(input[1]);
-		BigInteger res = additionAbsolute(u, v);
-		string testName = input[0] + " + " + input[1] + " = " + input[2];
+		BigInteger res = u + v;
+		std::string testName = input[0] + " + " + input[1] + " = " + input[2];
 		expectEqual(res.toString(), input[2], testName);
 	}
 }
@@ -122,8 +126,8 @@ void testSubstraction() {
 	for (auto input : inputs) {
 		BigInteger u(input[0]);
 		BigInteger v(input[1]);
-		BigInteger res = substractionAbsolute(u, v);
-		string testName = input[0] + " + " + input[1] + " = " + input[2];
+		BigInteger res = u - v;
+		std::string testName = input[0] + " + " + input[1] + " = " + input[2];
 		expectEqual(res.toString(), input[2], testName);
 	}
 }
@@ -163,8 +167,8 @@ void testMultiplication() {
 	for (auto input : inputs) {
 		BigInteger u(input[0]);
 		BigInteger v(input[1]);
-		BigInteger res = multiplicationAbsolute(u, v);
-		string testName = input[0] + " + " + input[1] + " = " + input[2];
+		BigInteger res = u * v;
+		std::string testName = input[0] + " + " + input[1] + " = " + input[2];
 		expectEqual(res.toString(), input[2], testName);
 	}
 }
@@ -191,18 +195,18 @@ void testDivision() {
 	        "9",
 	        "9000000000900000000090"
 	    },
-	    /*{
+	    {
 	        "340282366920938463463374607431768211456", // 2^128
 	        "18446744073709551616",                    // 2^64
 	        "18446744073709551616",                    // 2^64
 	        "0"
-	    },*/
-	    /*{
+	    },
+	    {
 	        "199999999999999999999999999999999999998",
 	        "99999999999999999999999999999999999999",
 	        "2",
 	        "0"
-	    },*/
+	    },
 	    {
 	        // giant product from your big multiplication example
 	        "1219326311370217952261850327338667885945115073915611949397448712086533622923332237463801111263526900",
@@ -210,12 +214,12 @@ void testDivision() {
 	        "98765432109876543210987654321098765432109876543210",
 	        "0"
 	    },
-	    /*{
+	    {
 	        "6277101735386680763835789423207666416083908700390324961280",
 	        "340282366920938463463374607431768211455",
 	        "18446744073709551616",
 	        "0"
-	    },*/
+	    },
 	    {
 	        "95334448647",
 	        "404810",
@@ -233,10 +237,9 @@ void testDivision() {
 	for (auto input : inputs) {
 		BigInteger u(input[0]);
 		BigInteger v(input[1]);
-		std::pair<BigInteger, BigInteger> res = divideAndRemainder(u, v);
-		BigInteger quotient = res.first;
-		BigInteger remainder = res.second;
-		string testName = input[0] + " = " + input[1] + " * " + input[2] + " + " + input[3];
+		BigInteger quotient = u / v;
+		BigInteger remainder = u % v;
+		std::string testName = input[0] + " = " + input[1] + " * " + input[2] + " + " + input[3];
 		expectEqual(quotient.toString(), input[2], testName);
 		expectEqual(remainder.toString(), input[3], testName);
 	}
@@ -244,7 +247,7 @@ void testDivision() {
 
 
 int main() {
-	cout << "===== BigInteger basic tests =====\n";
+	std::cout << "===== BigInteger basic tests =====\n";
 
     testConstructorsAndToString();
     testAddition();
@@ -252,6 +255,9 @@ int main() {
     testMultiplication();
     testDivision();
 
-    cout << "All tests passed: " << TEST_PASSED << "/" << TEST_TOTAL << "\n";
+    
+    std::cout << GREEN
+              << "All tests passed: " << TEST_PASSED << "/" << TEST_TOTAL
+              << RESET << "\n";
     return 0;
 }
