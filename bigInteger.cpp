@@ -264,7 +264,7 @@ BigInteger multiplicationAbsolute(BigInteger x, BigInteger y) {
 
 
 // helper for the knuth algorithm
-
+// is b1 > b2?
 bool isGreaterOrEqual(BigInteger b1, BigInteger b2) {
 	if (b1.m_digits.size() > b2.m_digits.size()) {
 		return true;
@@ -290,7 +290,7 @@ bool isGreaterOrEqual(BigInteger b1, BigInteger b2) {
  * 
 */	
 
-std::pair<BigInteger, BigInteger> divideAndRemainder(BigInteger& u, BigInteger& v) {
+std::pair<BigInteger, BigInteger> divideAndRemainderSaveVersion(BigInteger& u, BigInteger& v) {
 	std::vector<unsigned long long> quotient;
 
 	if (u.numberOfDigits() == 1 && v.numberOfDigits() == 1) {
@@ -330,8 +330,8 @@ std::pair<BigInteger, BigInteger> divideAndRemainder(BigInteger& u, BigInteger& 
 
 		// D3 [Calculate q_hat]
 		// q_hat is the initial guess. from the Theroem B: q_hat - 2 <= q <= q_hat
-		unsigned long long q_hat = (curr.m_digits[0] * BASE + curr.m_digits[1]) / v.m_digits[0];
-		unsigned long long r_hat = (curr.m_digits[0] * BASE + curr.m_digits[1]) % v.m_digits[0];
+		unsigned long long q_hat = (1ULL * curr.m_digits[0] * BASE + curr.m_digits[1]) / v.m_digits[0];
+		unsigned long long r_hat = (1ULL * curr.m_digits[0] * BASE + curr.m_digits[1]) % v.m_digits[0];
 
 		std::cout << "q_hat = " << q_hat << '\n';
 		std::cout << "r_hat = " << r_hat << '\n';
@@ -390,13 +390,136 @@ std::pair<BigInteger, BigInteger> divideAndRemainder(BigInteger& u, BigInteger& 
 	return {BigInteger(quotient), remainder};
 }
 
+std::pair<BigInteger, BigInteger> divideAndRemainder(BigInteger& u, BigInteger& v) {
+	std::vector<unsigned long long> quotient;
 
+	if (u.numberOfDigits() == 1 && v.numberOfDigits() == 1) {
+		int q = u.m_digits[0] / v.m_digits[0];
+		int r =  u.m_digits[0] % v.m_digits[0];
+		return {BigInteger(q), BigInteger(r)};
+	}
+
+	int n = v.numberOfDigits();
+	int m = u.numberOfDigits() - n;
+
+	debug(n, m);
+
+	debug(u.m_digits);
+	debug(v.m_digits);
+
+	// D1 [Normalize] Ensure that v_{n - 1} > BASE / 2
+	long long d = BASE / v.m_digits[0] + 1;
+	if (v.m_digits[0] < BASE / 2) {
+		u = multiplicationAbsolute(u, BigInteger(d));
+		v = multiplicationAbsolute(v, BigInteger(d));
+	}
+
+	vector<uint32_t> currv;
+	for (int i = 0; i < n - 1; i++) {
+		currv.push_back(u.m_digits[i]);
+	}
+
+	BigInteger curr(currv);
+
+	// D2 [Initialization]
+	for (int j = 0; j <= m; j++) {
+		std::cout << "\n\n\nj = " << j << "\n\n";
+		curr.m_digits.push_back(u.m_digits[n - 1 + j]);
+
+		//while (curr.m_digits.size() > n + 1) { // this part should never bu used in pratcise
+		while (false) {
+			std::cout << "remove an element from curr\n";
+			curr.m_digits.erase(curr.m_digits.begin());
+		}
+
+		debug(curr.m_digits);
+		std::cout << "new curr: " << curr << '\n';
+
+		unsigned long long u0 = 0;
+		unsigned long long u1 = 0;
+
+		debug(curr.m_digits.size());
+
+		if (curr.m_digits.size() >= n + 1) {
+			u0 = curr.m_digits[0];
+		}
+		if (curr.m_digits.size() >= n) {
+			u1 = curr.m_digits[1];
+		}
+
+		debug(u0, u1);
+
+		// D3 [Calculate q_hat]
+		// q_hat is the initial guess. from the Theroem B: q_hat - 2 <= q <= q_hat
+		unsigned long long q_hat = (u0 * BASE + u1) / v.m_digits[0];
+		unsigned long long r_hat = (u0 * BASE + u1) % v.m_digits[0];
+
+		std::cout << "q_hat = " << q_hat << '\n';
+		std::cout << "r_hat = " << r_hat << '\n';
+
+		long long u2 = 0;
+		if (curr.m_digits.size() >= 3 && curr.m_digits.size() >= n - 1) {
+			u2 = curr.m_digits[2];
+		}
+
+		while (q_hat >= BASE || q_hat * v.m_digits[1] >= (BASE * r_hat + u2)) {
+			std::cout << "do an adjust\n";
+			q_hat -= 1;
+			r_hat += v.m_digits[0];
+			if (r_hat >= BASE) break;
+		}
+
+
+		std::cout << "After adjustment: \n";
+		std::cout << "q_hat = " << q_hat << '\n';
+		std::cout << "r_hat = " << r_hat << '\n';
+
+		// D4 [Multiply and substract]
+		BigInteger sub = multiplicationAbsolute(BigInteger(q_hat), v);
+		std::cout << "sub : " << sub << '\n';
+
+		debug(curr.m_digits);
+		debug(sub.m_digits);
+
+		std::cout << "curr : " << curr << '\n';
+
+		debug(isGreaterOrEqual(curr, sub));
+
+		// D5 [Test Remainder]
+		if (isGreaterOrEqual(curr, sub)) {
+			std::cout << "It's greater so I can multiply\n";
+			std::cout << curr << " - " << sub << " = " << substractionAbsolute(curr, sub) << '\n';
+			curr = substractionAbsolute(curr, sub);
+			std::cout << "curr : " << curr << '\n';
+			debug(curr.m_digits);
+			
+		}
+		else { // D6 [Add Back]
+			// this step is very rare, it only appends with probabably 1 / (2 ^ 31)
+			std::cout << "PROBLEM!! It becomes negative so I need to handle carefully\n";
+			q_hat--;
+			curr = additionAbsolute(curr, v); // curr += v
+			curr = substractionAbsolute(curr, sub); // curr -= sub
+		}
+
+		quotient.push_back(q_hat);
+
+		// D7 [Loop on j]
+	}
+
+	// D8 [Unormalize]
+	debug(quotient);
+
+	BigInteger remainder(curr);
+
+	return {BigInteger(quotient), remainder};
+}
 
 using BI = BigInteger;
 
 int main() {
 
-	int x = 4213;
+	/*int x = 4213;
 	BI b1(x);
 	std::cout << b1 << '\n';
 
@@ -428,6 +551,7 @@ int main() {
 
 	std::cout << b6 << '\n';
 	std::cout << b7 << '\n';
+	*/
 
 	//BI b8 = additionAbsolute(b6, b7);
 
@@ -441,9 +565,11 @@ int main() {
 	//std::cout << b10 << '\n';
 
 	std::cout << "** RUN DIVISION **\n";
-	BI b11("1287412847218478217421874821482174892174821743812748127481897214893712743182741827489217430812743");
-	BI b12("1284321849218409128491284091284128491824901284019284912843");
+	BI b11("1248721874718214821743892174897218578972348972148972108947021987421821748172448217402187489217430892143");
+	BI b12("4999723108974214768742641872164871264871264762174347321674");
 
+	debug(b12.m_digits);
+	//return 0;
 	auto [q, r] = divideAndRemainder(b11, b12);
 
 	std::cout << "q = " << q << '\n';
