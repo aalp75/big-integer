@@ -1,6 +1,6 @@
 #include <iostream>
 #include <string>
-#include "bigInteger.h"
+#include "../bigInteger.h"
 
 const char* GREEN = "\033[32m";
 const char* RED   = "\033[31m";
@@ -18,8 +18,10 @@ void expectEqual(const std::string& result, const std::string& expected, const s
         std::exit(1);
     } 
     else {
-        std::cout << GREEN << "[OK]" << RESET << "   " << testName << '\n';
-        TEST_PASSED++;
+       	TEST_PASSED++;
+       	std::cout << GREEN << "[OK]" << RESET << " TEST #" 
+                  << TEST_PASSED << ": " << testName << '\n';
+        
     }
 }
 
@@ -69,6 +71,8 @@ void testAddition() {
 	     "27182818284590452353602874713527",
 	     "58598744820488384738229308546322"}
 	};
+
+	std::cout << "\n===== Addition tests =====\n";
 
 	for (auto input : inputs) {
 		BigInteger u(input[0]);
@@ -123,6 +127,8 @@ void testSubstraction() {
 	     "31415926535897932384626433832795"}
 	};
 
+	std::cout << "\n===== Substraction tests =====\n";
+
 	for (auto input : inputs) {
 		BigInteger u(input[0]);
 		BigInteger v(input[1]);
@@ -163,6 +169,8 @@ void testMultiplication() {
 	        "340282366920938463463374607431768211456"
 	    }
 	};
+
+	std::cout << "\n===== Multiplication tests =====\n";
 
 	for (auto input : inputs) {
 		BigInteger u(input[0]);
@@ -234,6 +242,8 @@ void testDivision() {
 	    }
 	};
 
+	std::cout << "\n===== Division tests =====\n";
+
 	for (auto input : inputs) {
 		BigInteger u(input[0]);
 		BigInteger v(input[1]);
@@ -247,7 +257,7 @@ void testDivision() {
 
 
 int main() {
-	std::cout << "===== BigInteger basic tests =====\n";
+	std::cout << "===== BigInteger basic tests =====\n\n";
 
     testConstructorsAndToString();
     testAddition();

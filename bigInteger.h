@@ -32,72 +32,23 @@ public: // for now everything is public
 	template <typename T>
 	BigInteger(const std::vector<T>& input);
 
-	void printClass() const {
-		std::cout << "{m_sign = " << m_sign << ", m_digits = {";
-		for (std::size_t i = 0; i < m_digits.size(); i++) {
-			std::cout << m_digits[i];
-			if (i + 1 < m_digits.size()) {
-				std::cout << ", ";
-			} 
-		}
-		std::cout << "}\n";
-	}
+	int numberOfDigits() const { return m_digits.size();}
 
-	int numberOfDigits() const {
-		return m_digits.size();
-	}
+	std::string toString() const;
+	
+	BigInteger(const BigInteger& other); // copy constructor
+    BigInteger& operator=(const BigInteger& other); // copy assignement
+    BigInteger(BigInteger&& other) noexcept; // move constructor
+    BigInteger& operator=(BigInteger&& other) noexcept;// move assignement
 
-	std::string toString() const {
-		if (m_sign == 0) {
-			return "0";
-		}
-		std::string result;
+    // delete, use by default because nothing is dynamically allocated
+    ~BigInteger() = default;
 
-		result += "m_digits = ";
-		int p = m_digits.size() - 1;
-		for (std::size_t i = 0; i < m_digits.size(); i++) {
-			result += std::to_string(m_digits[i]) + " * B ^ " + std::to_string(p);
-			if (m_digits.size() > 1 && i < m_digits.size() - 1) {
-				result += " + ";
-			}
-			p--;
-		}
 
-		//std::cout << result << '\n';
-		
-		result = std::to_string(m_digits[0]);
 
-		std::vector<long long> res;
+	BigInteger addAbsolute(const BigInteger& other) const;
 
-		res.push_back(0);
-
-		long long carry = 0;
-
-		for (int i = 0; i < m_digits.size(); i++) {
-			carry = m_digits[i];
-
-			for (std::size_t j = 0; j < res.size(); j++) {
-				res[j] = res[j] * BASE + carry;
-				carry = res[j] / 10;
-				res[j] = res[j] % 10;
-			}
-
-			while (carry > 0) {
-				res.push_back(carry % 10);
-				carry = carry / 10;
-			}
-		}
-
-		std::reverse(res.begin(), res.end());
-
-		result.clear();
-
-		for (auto e : res) {
-			result += std::to_string(e);
-		}
-
-		return result;
-	}
+	BigInteger& operator+=(const BigInteger& other);
 
 	friend std::ostream& operator<<(std::ostream& os, const BigInteger& x) {
 		return os << x.toString();
@@ -120,10 +71,3 @@ public: // for now everything is public
 	friend bool operator<=(const BigInteger& x, const BigInteger& y);
 	friend bool operator>=(const BigInteger& x, const BigInteger& y);
 };
-
-// helpers functions
-
-//BigInteger additionAbsolute(const BigInteger& x, const BigInteger& y);
-//BigInteger substractionAbsolute(const BigInteger& x, const BigInteger& y);
-//BigInteger multiplicationAbsolute(const BigInteger& x, const BigInteger& y);
-//std::pair<BigInteger, BigInteger> divideAndRemainder(const BigInteger& u, const BigInteger& v);
