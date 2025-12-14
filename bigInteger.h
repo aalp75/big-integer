@@ -4,55 +4,67 @@
 #include <vector>
 #include <string>
 
-const static long long SHIFT = 32;
-const static long long BASE = 1ll << SHIFT;
-const static long long BASE_MASK = (0xffffffff); // 2 ^ 32 - 1
-
 class BigInteger {
+
+// Representation: sign + magnitude in base 2^32, MSB-first.
+// Invariant (recommended): zero => m_sign == 0 and m_digits empty.
+
 //private
-public: // for now everything is public
+public: // for now let's put everything in the public scope
 
-/* The class is representing the number in base 2 ^ 32
- * 	
- * For now it only handle positive --> m_sign must be every time positive
- * 
-*/
+	int m_sign; // -1, 0, +1
+	std::vector<uint32_t> m_digits; // MSB-first (Most Significant Bit)
 
-	int m_sign;
-	std::vector<uint32_t> m_digits; // m_digits[0] is the most significant digit
+	inline static constexpr long long SHIFT = 32;
+	inline static constexpr long long BASE = 1LL << SHIFT;
+	inline static constexpr long long BASE_MASK = (0xFFFFFFFF); // 2 ^ 32 - 1
 
-	// constructors
+public:
+
+	// Constructors (no explicit keyword for now to be able to perform BigInteger("63") * 67)
 	BigInteger();
 	BigInteger(int val);
 	BigInteger(long long val);
 	BigInteger(unsigned long long val);
-
 	BigInteger(std::string s);
 	
 	template <typename T>
 	BigInteger(const std::vector<T>& input);
 
-	int numberOfDigits() const { return m_digits.size();}
-
+	// Observers & helpers
+	int numberOfDigits() const;
+	BigInteger abs() const;
 	std::string toString() const;
+
+	bool isNull() const;
+	void printDigits() const;
 	
 	BigInteger(const BigInteger& other); // copy constructor
     BigInteger& operator=(const BigInteger& other); // copy assignement
     BigInteger(BigInteger&& other) noexcept; // move constructor
     BigInteger& operator=(BigInteger&& other) noexcept;// move assignement
+    ~BigInteger() = default; // destructor; use by default because there is no dynamic allocation
 
-    // delete, use by default because nothing is dynamically allocated
-    ~BigInteger() = default;
+    // Unary
+    BigInteger operator+() const;
+    BigInteger operator-() const;
+
+    // Compound assigment
+    BigInteger& operator+=(const BigInteger& other);
+    BigInteger& operator-=(const BigInteger& other);
+	BigInteger& operator*=(const BigInteger& other);
+	BigInteger& operator/=(const BigInteger& other);
+	BigInteger& operator%=(const BigInteger& other);
 
 
 
-	BigInteger addAbsolute(const BigInteger& other) const;
+	// Increment & decrement
+	BigInteger& operator++(); // prefix (++x)
+	BigInteger operator++(int); // postfix (x++)
+	BigInteger& operator--(); // prefix (--x)
+	BigInteger operator--(int); // postfix(x--)
 
-	BigInteger& operator+=(const BigInteger& other);
-
-	friend std::ostream& operator<<(std::ostream& os, const BigInteger& x) {
-		return os << x.toString();
-	}
+	// Non-member operators
 
 	// Arithmetic operators
 	friend BigInteger operator+(const BigInteger& x, const BigInteger& y);
@@ -61,7 +73,7 @@ public: // for now everything is public
 	friend BigInteger operator/(const BigInteger& x, const BigInteger& y);
 	friend BigInteger operator%(const BigInteger& x, const BigInteger& y);
 
-	// comparison operators
+	// Comparison operators
 	friend bool operator==(const BigInteger& x, const BigInteger& y);
 	friend bool operator!=(const BigInteger& x, const BigInteger& y);
 
@@ -70,4 +82,11 @@ public: // for now everything is public
 
 	friend bool operator<=(const BigInteger& x, const BigInteger& y);
 	friend bool operator>=(const BigInteger& x, const BigInteger& y);
+
+	// Input & output
+	friend std::ostream& operator<<(std::ostream& os, const BigInteger& x);
+	friend std::istream& operator>>(std::istream& is, BigInteger& x);
+
+	// Swap
+	friend void swap(BigInteger& x, BigInteger& y) noexcept;
 };

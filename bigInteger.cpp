@@ -1,23 +1,30 @@
-#include<vector>
-#include<iostream>
-#include<string>
+#include <vector>
+#include <iostream>
+#include <string>
+#include <stdexcept> // throw runtime_error
+#include <algorithm> // std::reverse and std::max
+#include <cctype> // std::isdigit
+#include <cstdint> // for fixed-width integer types (uint32_t & uint64_t)
+#include <utility> // std::pair and std::move
 
 #include "bigInteger.h"
-#include "debug.h"
 
 //#define debug(...)
 
-//Constructors
+// ---------------- Constructors ----------------
 
 BigInteger::BigInteger() : m_sign(0) {}
 
 BigInteger::BigInteger(int val) {
-	m_sign = 1;
-	m_digits.push_back(val);
+	if (val == 0) { m_sign = 0; return; }
+	m_sign = (val < 0) ? -1 : 1;
+	m_digits.push_back(std::abs(val));
 }
 
 BigInteger::BigInteger(long long val) {
-	m_sign = 1;
+	if (val == 0) { m_sign = 0; return; }
+	m_sign = (val < 0) ? -1 : 1;
+	val = std::abs(val);
 	if ((val >> 32) > 0) {
 		m_digits.push_back(val >> 32);
 	}
@@ -34,7 +41,31 @@ BigInteger::BigInteger(unsigned long long val) {
 
 
 BigInteger::BigInteger(std::string s) {
-	m_sign = 1;
+	if (s.empty()) { // TODO: use an isValid method
+		throw std::invalid_argument("BigInteger: empty string");
+	}
+
+	if (s == "0") {
+		m_sign = 0;
+		return;
+	}
+
+	if (s[0] == '-') {
+		m_sign = -1;
+	}
+	else {
+		m_sign = 1;
+	}
+
+	// clean the string
+	std::string sCleaned;
+
+	for (auto c : s) {
+		if (std::isdigit(c)) sCleaned += c;
+	}
+
+	s = sCleaned;
+
 	long long sum = 0;
 	int n = s.size();
 	std::vector<long long> digits;
@@ -81,6 +112,8 @@ BigInteger::BigInteger(const std::vector<T>& input) {
 	}
 }
 
+// ---------------- Copy, Move & Destructor ----------------
+
 // Copy constructors
 BigInteger::BigInteger(const BigInteger& other)
 	: m_sign(other.m_sign)
@@ -113,6 +146,12 @@ BigInteger& BigInteger::operator=(BigInteger&& other) noexcept {
 	return *this;
 }
 
+// ---------------- Helpers & Observers ----------------
+
+int BigInteger::numberOfDigits() const { 
+	return static_cast<int>(m_digits.size());
+}
+
 std::string BigInteger::toString() const {
 	if (m_sign == 0) {
 		return "0";
@@ -143,6 +182,10 @@ std::string BigInteger::toString() const {
 
 	std::string result;
 
+	if (m_sign < 0) {
+		result += '-';
+	}
+
 	for (auto e : res) {
 		result += std::to_string(e);
 	}
@@ -150,46 +193,28 @@ std::string BigInteger::toString() const {
 	return result;
 }
 
-
-// Addition in placae
-BigInteger BigInteger::addAbsolute(const BigInteger& other) const {
-	int nx = numberOfDigits();
-	int ny = other.numberOfDigits();
-
-	int length = std::max(nx, ny);
-	std::vector<unsigned long long> input(length + 1, 0);
-
-	int xIte = nx - 1;
-	int yIte = ny - 1;
-
-	long long carry = 0;
-
-	for (int i = length; i >= 0; i--) {
-		long long val = carry;
-		if (xIte >= 0) {
-			val += m_digits[xIte];
-			xIte--;
+void BigInteger::printDigits() const {
+	std::cout << "[";
+	for (std::size_t i = 0; i < m_digits.size(); i++) {
+		std::cout << m_digits[i];
+		if (i + 1 < m_digits.size()) {
+			std::cout << ", ";
 		}
-		if (yIte >= 0) {
-			val += other.m_digits[yIte];
-			yIte--;
-		}
-
-		carry = val / BASE;
-		input[i] = val % BASE;
 	}
-	return BigInteger(input);
+	std::cout << "]\n";
 }
 
-BigInteger& BigInteger::operator+=(const BigInteger& other) {
-	*this = addAbsolute(other);
-	return *this;
+BigInteger BigInteger::abs() const {
+	BigInteger res(*this);
+	if (res.m_sign < 0) res.m_sign = 1;
+	return res;
 }
 
-BigInteger operator+(const BigInteger& x, const BigInteger& y) {
-	return BigInteger(x) += y;
+bool BigInteger::isNull() const {
+	return m_sign == 0;
 }
 
+// ---------------- Absolute arithmetic helpers ----------------
 
 // Addition
 BigInteger additionAbsolute(const BigInteger& x, const BigInteger& y) {
@@ -215,16 +240,15 @@ BigInteger additionAbsolute(const BigInteger& x, const BigInteger& y) {
 			yIte--;
 		}
 
-		carry = val / BASE;
-		input[i] = val % BASE;
+		carry = val / BigInteger::BASE;
+		input[i] = val % BigInteger::BASE;
 	}
 	return BigInteger(input);
 }
 
-// Substraction x - y
-// Condition is that x >= y
+// Substraction
+// Assumes that |x| >= |y|
 BigInteger substractionAbsolute(const BigInteger& x, const BigInteger& y) {
-
 	int nx = x.numberOfDigits();
 	int ny = y.numberOfDigits();
 
@@ -248,7 +272,7 @@ BigInteger substractionAbsolute(const BigInteger& x, const BigInteger& y) {
 		}
 
 		if (val < 0) {
-			val += BASE;
+			val += BigInteger::BASE;
 			borrow = 1; 
 		}
 		else {
@@ -260,10 +284,9 @@ BigInteger substractionAbsolute(const BigInteger& x, const BigInteger& y) {
 	return BigInteger(input);
 }
 
-// multiplication
-
+// Multiplication
 BigInteger multiplicationAbsolute(const BigInteger& x, const BigInteger& y) {
-
+	if (x.isNull() || y.isNull()) return BigInteger(0);
     int nx = x.numberOfDigits();
     int ny = y.numberOfDigits();
 
@@ -276,8 +299,8 @@ BigInteger multiplicationAbsolute(const BigInteger& x, const BigInteger& y) {
             int k = i + j + 1;
 			unsigned long long val = (unsigned long long)x.m_digits[i] * (unsigned long long)y.m_digits[j] + carry;
 			input[k] += val;
-			carry = input[k] / BASE;
-            input[k] %= BASE;
+			carry = input[k] / BigInteger::BASE;
+            input[k] %= BigInteger::BASE;
         }
         input[i] += carry;
         carry = 0;
@@ -286,106 +309,65 @@ BigInteger multiplicationAbsolute(const BigInteger& x, const BigInteger& y) {
 	return BigInteger(input);
 }
 
+// short divison algorithm that can be used when the number of digits of v is 1
+std::pair<BigInteger, BigInteger> shortDivision(BigInteger u, BigInteger v) {
+	std::vector<unsigned long long> quotient;
 
-// helper for the knuth algorithm
-// is b1 > b2?
-bool isGreaterOrEqual(BigInteger b1, BigInteger b2) {
-	if (b1.m_digits.size() > b2.m_digits.size()) {
-		return true;
-	}
-	if (b1.m_digits.size() < b2.m_digits.size()) {
-		return false;
+	unsigned long long divisor = v.m_digits[0];
+	unsigned long long remainder = 0;
+
+	for (std::size_t i = 0; i < u.numberOfDigits(); i++) {
+		remainder = remainder * BigInteger::BASE + u.m_digits[i];
+		unsigned long long q = remainder / divisor;
+		quotient.push_back(q);
+		remainder %= divisor;
 	}
 
-	for (int i = 0; i < b1.m_digits.size(); i++) {
-		if (b1.m_digits[i] > b2.m_digits[i]) {
-			return true;
-		}
-		if (b1.m_digits[i] < b2.m_digits[i]) {
-			return false;
-		}
-	}
-	return true;
+	return {BigInteger(quotient), BigInteger(remainder)};
 }
 
-/* Knuth algorithm
+/* Knuth Algorithm D (TAOCP Vol. 2 §4.3.1)
  * 
  * Division of u / v, e.g. 15 / 4 = {3, 2} because 15 = 4 * 3 + 2
  * 
 */	
 
-// short divison algorithm that can be used when the number of digits of v is 1
+std::pair<BigInteger, BigInteger> divideAndRemainder(const BigInteger& u_init, const BigInteger& v_init) {
 
-std::pair<BigInteger, BigInteger> shortDivision(BigInteger u, BigInteger v) {
-
-	std::vector<long long> quotient;
-	BigInteger curr(0);
-	curr.m_sign = 1;
-	for (int i = 0; i < u.m_digits.size(); i++) {
-		curr.m_digits.push_back(u.m_digits[i]);
-		if (isGreaterOrEqual(u, v)) {
-			unsigned long long u0 = 0;
-			unsigned long long u1 = 0;
-
-			if (curr.m_digits.size() >= 2) {
-				u0 = curr.m_digits[0];
-			}
-			if (curr.m_digits.size() >= 1) {
-				u1 = curr.m_digits[1];
-			}
-
-			unsigned long long q = (u0 * BASE + u1) / v.m_digits[0];
-			BigInteger sub = multiplicationAbsolute(BigInteger(q), v);
-			curr = substractionAbsolute(curr, sub);
-
-			quotient.push_back(q);
-		}
+	if (v_init.isNull()) {
+		throw std::runtime_error("BigInteger: division by zero");
 	}
 
-	return {BigInteger(quotient), curr};
-
-}
-
-std::pair<BigInteger, BigInteger> divideAndRemainder(const BigInteger& u_init, const BigInteger& v_init) {
 	std::vector<unsigned long long> quotient;
 
 	BigInteger u(u_init);
 	BigInteger v(v_init);
 
-	//std::cout << "Initial value:\nu = " << u << "\nv = " << v << '\n';
-
+	// perform int division
 	if (u.numberOfDigits() == 1 && v.numberOfDigits() == 1) {
+
 		int q = u.m_digits[0] / v.m_digits[0];
 		int r =  u.m_digits[0] % v.m_digits[0];
 		return {BigInteger(q), BigInteger(r)};
 	}
 
-	// from there n >= 2
+	// perform short division
+	if (v.numberOfDigits() == 1) {
+		return shortDivision(u, v);
+	}
+
+	// from now on n >= 2
 
 	int n = v.numberOfDigits();
 	int m = u.numberOfDigits() - n;
 
-	//debug(n, m);
-
-	//debug(u.m_digits);
-	//debug(v.m_digits);
-
 	// D1 [Normalize] Ensure that v_{n - 1} > BASE / 2
-	long long d = 1;
-	// this part can be made a bit fast because as it's a power of 2 we can know exactly what is the 
-	// shift required
-	while (v.m_digits[0] < BASE / 2) {
-		d *= 2;
-		u = multiplicationAbsolute(u, BigInteger(2));
-		v = multiplicationAbsolute(v, BigInteger(2));
-	}
+	// shift the digits to the left so the MSB is set to 1
 
-	//std::cout << "multiply by d = " << d << '\n';
+	long long d = 1ll << __builtin_clz(v.m_digits[0]);
 
-	//std::cout << "new value:\n" << "u = " << u << "\nv = " << v << '\n';
-
-	//debug(u.m_digits);
-	//debug(v.m_digits);
+	u = multiplicationAbsolute(u, BigInteger(d));
+	v = multiplicationAbsolute(v, BigInteger(d));
 
 	std::vector<uint32_t> currv;
 	for (int i = 0; i < n - 1; i++) {
@@ -398,23 +380,15 @@ std::pair<BigInteger, BigInteger> divideAndRemainder(const BigInteger& u_init, c
 		shift++;
 	}
 
-	//return {u, v};
-
 	BigInteger curr(currv);
 
 	// D2 [Initialization]
-	for (int j = 0; j <= m; j++) {
-		//std::cout << "\n\n\nj = " << j << "\n\n";
+	for (std::size_t j = 0; j <= m; j++) {
 		curr.m_digits.push_back(u.m_digits[n - 1 + shift + j]);
-
-		//debug(curr.m_digits);
-		//std::cout << "new curr: " << curr << '\n';
 
 		unsigned long long u0 = 0;
 		unsigned long long u1 = 0;
 		unsigned long long u2 = 0;
-
-		//debug(curr.m_digits.size());
 
 		if (curr.m_digits.size() >= n + 1) {
 			u0 = curr.m_digits[0];
@@ -430,55 +404,29 @@ std::pair<BigInteger, BigInteger> divideAndRemainder(const BigInteger& u_init, c
 
 		// D3 [Calculate q_hat]
 		// q_hat is the initial guess. from the Theroem B: q_hat - 2 <= q <= q_hat
-		unsigned long long q_hat = (u0 * BASE + u1) / v.m_digits[0];
-		unsigned long long r_hat = (u0 * BASE + u1) % v.m_digits[0];
+		unsigned long long q_hat = (u0 * BigInteger::BASE + u1) / v.m_digits[0];
+		unsigned long long r_hat = (u0 * BigInteger::BASE + u1) % v.m_digits[0];
 
-		//std::cout << "q_hat = " << q_hat << '\n';
-		//std::cout << "r_hat = " << r_hat << '\n';
-
-		
-		//if (curr.m_digits.size() >= 3 && curr.m_digits.size() >= n - 1) {
-			//u2 = curr.m_digits[2];
-		//}
-
-		while (q_hat >= BASE || q_hat * v.m_digits[1] > (BASE * r_hat + u2)) {
-			//std::cout << "do an adjust\n";
+		while (q_hat >= BigInteger::BASE || q_hat * v.m_digits[1] > (BigInteger::BASE * r_hat + u2)) {
 			q_hat -= 1;
 			r_hat += v.m_digits[0];
-			if (r_hat >= BASE) break;
+			if (r_hat >= BigInteger::BASE) break;
 		}
 
 
-		//std::cout << "After adjustment: \n";
-		//std::cout << "q_hat = " << q_hat << '\n';
-		//std::cout << "r_hat = " << r_hat << '\n';
-
 		// D4 [Multiply and substract]
-		BigInteger sub = multiplicationAbsolute(BigInteger(q_hat), v);
-		//std::cout << "sub : " << sub << '\n';
-
-		//debug(curr.m_digits);
-		//debug(sub.m_digits);
-
-		//std::cout << "curr : " << curr << '\n';
-
-		//debug(isGreaterOrEqual(curr, sub));
+		BigInteger sub = BigInteger(q_hat) * v;
 
 		// D5 [Test Remainder]
-		if (isGreaterOrEqual(curr, sub)) {
-			//std::cout << "It's greater so I can multiply\n";
-			//std::cout << curr << " - " << sub << " = " << substractionAbsolute(curr, sub) << '\n';
-			curr = substractionAbsolute(curr, sub);
-			//std::cout << "curr : " << curr << '\n';
-			//debug(curr.m_digits);
-			
+		if (curr >= sub) {
+			curr -= sub;
 		}
 		else { // D6 [Add Back]
 			// this step is very rare, it only appends with probabably 1 / (2 ^ 31)
-			//std::cout << "It becomes negative so I need to handle carefully\n";
+			// specific tests need to be written for this case
 			q_hat--;
-			curr = additionAbsolute(curr, v); // curr += v
-			curr = substractionAbsolute(curr, sub); // curr -= sub
+			curr += v;
+			curr -= sub;
 		}
 
 		quotient.push_back(q_hat);
@@ -487,36 +435,121 @@ std::pair<BigInteger, BigInteger> divideAndRemainder(const BigInteger& u_init, c
 	}
 
 	// D8 [Unormalize]
-	//debug(quotient);
-
+	// find remainder by running shortDivision algorithm on the normalization factor d
 	BigInteger remainder(curr);
-	//debug(d);
-	//std::cout << "curr before = " << curr << '\n';
-	if (d != 1) {
-		auto res = shortDivision(curr, BigInteger(d));
-		remainder = BigInteger(res.first);
-	}
+
+	std::pair<BigInteger, BigInteger> res = shortDivision(curr, BigInteger(d));
+	remainder = BigInteger(res.first);
 
 	return {BigInteger(quotient), remainder};
 }
 
+// ---------------- Operators ----------------
+
+BigInteger BigInteger::operator+() const {
+	return *this;
+}
+BigInteger BigInteger::operator-() const {
+	BigInteger res(*this);
+	res.m_sign *= -1;
+	return res;
+}
+
+BigInteger& BigInteger::operator+=(const BigInteger& other) {
+	if (other.m_sign == 0) return *this;
+	if (m_sign == 0) {
+		*this = other;
+		return *this;
+	}
+
+	if (m_sign == other.m_sign) {
+		*this = additionAbsolute(*this, other);
+		m_sign = other.m_sign;
+		return *this;
+	}
+
+	if (this->abs() >= other.abs()) {
+		*this = substractionAbsolute(*this, other);
+		m_sign = -other.m_sign;
+	}
+	else {
+		*this = substractionAbsolute(other, *this);
+		m_sign = other.m_sign;
+	}
+
+	if (m_digits.empty()) {
+		m_sign = 0;
+	}
+
+	return *this;
+}
+
+BigInteger& BigInteger::operator++() { //  prefix (++x)
+	*this += BigInteger(1);
+	return *this;
+}
+
+BigInteger BigInteger::operator++(int) { // postfix (x++)
+	BigInteger old = *this;
+	++(*this);
+	return old;
+}
+
+BigInteger& BigInteger::operator-=(const BigInteger& other) {
+	if (other.isNull()) return *this;
+    *this += (-other);
+    return *this;
+}
+
+BigInteger& BigInteger::operator--() {// prefix (--x)
+	*this -= BigInteger(1);
+	return *this;
+}
+
+BigInteger BigInteger::operator--(int) { // postfix(x--)
+	BigInteger old = *this;
+	--(*this);
+	return old;
+}
+
+BigInteger& BigInteger::operator*=(const BigInteger& other) {
+	int finalSign = m_sign * other.m_sign;
+	*this = multiplicationAbsolute(*this, other);
+	m_sign = finalSign;
+	return *this;
+}
+
+
+BigInteger& BigInteger::operator/=(const BigInteger& other) {
+	int finalSign = m_sign * other.m_sign;
+	*this = divideAndRemainder(*this, other).first;
+	m_sign = finalSign;
+	return *this;
+}
+
+BigInteger& BigInteger::operator%=(const BigInteger& other) {
+	*this = divideAndRemainder(*this, other).second;
+	return *this;
+}
+
+BigInteger operator+(const BigInteger& x, const BigInteger& y) {
+	return BigInteger(x) += y;
+}
 
 BigInteger operator-(const BigInteger& x, const BigInteger& y) {
-	return substractionAbsolute(x, y);
+	return BigInteger(x) -= y;
 }
 
 BigInteger operator*(const BigInteger& x, const BigInteger& y) {
-	return multiplicationAbsolute(x, y);
+	return BigInteger(x) *= y;
 }
 
 BigInteger operator/(const BigInteger& x, const BigInteger& y) {
-	std::pair<BigInteger, BigInteger> res = divideAndRemainder(x, y);
-	return res.first;
+	return BigInteger(x) /= y;
 }
 
 BigInteger operator%(const BigInteger& x, const BigInteger& y) {
-	std::pair<BigInteger, BigInteger> res = divideAndRemainder(x, y);
-	return res.second;
+	return BigInteger(x) %= y;
 }
 
 // comparison operators
@@ -550,6 +583,19 @@ bool operator>=(const BigInteger& x, const BigInteger& y) {
    	return !operator<(x, y);
 }
 
+std::ostream& operator<<(std::ostream& os, const BigInteger& x) {
+	return os << x.toString();
+}
 
+std::istream& operator>>(std::istream& is, BigInteger& x) {
+	std::string s;
+	if (!(is >> s)) return is;
+	x = BigInteger(s);
+	return is;
+}
 
+void swap(BigInteger& x, BigInteger& y) noexcept {
+	std::swap(x.m_sign, y.m_sign);
+	std::swap(x.m_digits, y.m_digits);
+}
 
