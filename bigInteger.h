@@ -1,4 +1,5 @@
-#pragma once
+#ifndef BIGINTEGER_H
+#define BIGINTEGER_H
 
 #include <iostream>
 #include <vector>
@@ -6,44 +7,54 @@
 
 class BigInteger {
 
-// Representation: sign + magnitude in base 2^32, MSB-first.
-// Invariant (recommended): zero => m_sign == 0 and m_digits empty.
+// Representation: sign + words in base B (2^32), MSB-first.
+// Zero is invariant: m_sign == 0 ~&& m_words empty.
 
-//private
-public: // for now let's put everything in the public scope
+private:
 
 	int m_sign; // -1, 0, +1
-	std::vector<uint32_t> m_digits; // MSB-first (Most Significant Bit)
+	std::vector<uint32_t> m_words; // MSB-first (Most Significant Bit)
 
-	inline static constexpr long long SHIFT = 32;
-	inline static constexpr long long BASE = 1LL << SHIFT;
-	inline static constexpr long long BASE_MASK = (0xFFFFFFFF); // 2 ^ 32 - 1
+	inline static constexpr int64_t SHIFT = 32;
+	inline static constexpr int64_t BASE = 1LL << SHIFT;
+	inline static constexpr int64_t BASE_MASK = (0xFFFFFFFF); // 2 ^ 32 - 1
+	inline static constexpr int64_t KARATSUBA_THRESHOLD = 80;
 
 public:
 
-	// Constructors (no explicit keyword for now to be able to perform BigInteger("63") * 67)
+	// Constructors (no explicit keyword for now to support implicit cast such that BigInteger("63") * 67)
 	BigInteger();
 	BigInteger(int val);
+	BigInteger(unsigned int val);
+	BigInteger(long val);
+	BigInteger(unsigned long val);
 	BigInteger(long long val);
 	BigInteger(unsigned long long val);
 	BigInteger(std::string s);
 	
-	template <typename T>
-	BigInteger(const std::vector<T>& input);
+	template <typename T> BigInteger(const std::vector<T>& input);
 
 	// Observers & helpers
-	int numberOfDigits() const;
+	std::size_t numberOfWords() const;
 	BigInteger abs() const;
 	std::string toString() const;
+	template<typename T> void addWord(T element);
 
 	bool isNull() const;
-	void printDigits() const;
+	void printWords() const;
 	
 	BigInteger(const BigInteger& other); // copy constructor
     BigInteger& operator=(const BigInteger& other); // copy assignement
     BigInteger(BigInteger&& other) noexcept; // move constructor
     BigInteger& operator=(BigInteger&& other) noexcept;// move assignement
     ~BigInteger() = default; // destructor; use by default because there is no dynamic allocation
+
+    // Core helper functions implementing the computation logic on absolute values
+    friend BigInteger additionAbsolute(const BigInteger& x, const BigInteger& y);
+    friend BigInteger substractionAbsolute(const BigInteger& x, const BigInteger& y);
+    friend BigInteger multiplicationAbsolute(const BigInteger& x, const BigInteger& y);
+    friend std::pair<BigInteger, BigInteger> shortDivision(const BigInteger& x, const BigInteger& y);
+    friend std::pair<BigInteger, BigInteger> divideAndRemainder(const BigInteger& x, const BigInteger& y);
 
     // Unary
     BigInteger operator+() const;
@@ -55,8 +66,6 @@ public:
 	BigInteger& operator*=(const BigInteger& other);
 	BigInteger& operator/=(const BigInteger& other);
 	BigInteger& operator%=(const BigInteger& other);
-
-
 
 	// Increment & decrement
 	BigInteger& operator++(); // prefix (++x)
@@ -89,4 +98,8 @@ public:
 
 	// Swap
 	friend void swap(BigInteger& x, BigInteger& y) noexcept;
+
+
 };
+
+#endif

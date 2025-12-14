@@ -1,6 +1,6 @@
 ## BigInteger — Arbitrary-Precision Integer Class in C++
 
-`BigInteger` is a C++ class implementing arbitrarily large signed integers (limited only by available memory).  
+`BigInteger` is a C++ class implementing arbitrarily large unsigned integers (limited only by available memory).  
 
 It supports:
 

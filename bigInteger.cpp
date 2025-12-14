@@ -6,10 +6,9 @@
 #include <cctype> // std::isdigit
 #include <cstdint> // for fixed-width integer types (uint32_t & uint64_t)
 #include <utility> // std::pair and std::move
+#include <cstdlib> // std::abs
 
 #include "bigInteger.h"
-
-//#define debug(...)
 
 // ---------------- Constructors ----------------
 
@@ -18,27 +17,51 @@ BigInteger::BigInteger() : m_sign(0) {}
 BigInteger::BigInteger(int val) {
 	if (val == 0) { m_sign = 0; return; }
 	m_sign = (val < 0) ? -1 : 1;
-	m_digits.push_back(std::abs(val));
+	addWord(std::abs(val));
+}
+
+BigInteger::BigInteger(unsigned int val) {
+	if (val == 0) { m_sign = 0; return; }
+	m_sign = 1;
+	m_words.push_back(static_cast<uint32_t>(val));
+}
+
+BigInteger::BigInteger(long val) {
+	if (val == 0) { m_sign = 0; return; }
+	m_sign = (val < 0) ? -1 : 1;
+	if (val < 0) val = -val;
+	if ((val >> 32) > 0) {
+		addWord(val >> 32);
+	}
+	addWord(static_cast<uint64_t>(val) & BigInteger::BASE_MASK);
+}
+
+BigInteger::BigInteger(unsigned long val) {
+	if (val == 0) { m_sign = 0; return; }
+	m_sign = 1;
+	if ((val >> 32) > 0) {
+		addWord(val >> 32);
+	}
+	m_words.push_back(static_cast<uint32_t>(val & BASE_MASK));
 }
 
 BigInteger::BigInteger(long long val) {
 	if (val == 0) { m_sign = 0; return; }
 	m_sign = (val < 0) ? -1 : 1;
-	val = std::abs(val);
+	if (val < 0) val = -val;
 	if ((val >> 32) > 0) {
-		m_digits.push_back(val >> 32);
+		addWord(val >> 32);
 	}
-	m_digits.push_back(val & BASE_MASK);
+	addWord(static_cast<uint64_t>(val) & BASE_MASK);
 }
 
 BigInteger::BigInteger(unsigned long long val) {
 	m_sign = 1;
 	if ((val >> 32) > 0) {
-		m_digits.push_back(val >> 32);	
+		m_words.push_back(static_cast<uint32_t>(val >> 32));
 	}
-	m_digits.push_back(val & BASE_MASK);
+	m_words.push_back(static_cast<uint32_t>(val & BASE_MASK));
 }
-
 
 BigInteger::BigInteger(std::string s) {
 	if (s.empty()) { // TODO: use an isValid method
@@ -66,13 +89,12 @@ BigInteger::BigInteger(std::string s) {
 
 	s = sCleaned;
 
-	long long sum = 0;
-	int n = s.size();
-	std::vector<long long> digits;
-	digits.push_back(s[0] - '0');;
+	std::size_t n = s.size();
+	std::vector<uint64_t> digits;
+	digits.push_back(static_cast<uint32_t>(s[0] - '0'));
 	for (std::size_t i = 1; i < n; i++) {
 
-		long long carry = (s[i] - '0');
+		uint64_t carry = static_cast<uint64_t>(s[i] - '0');
 
 		for (std::size_t j = 0; j < digits.size(); j++) {
 			digits[j] = digits[j] * 10 + carry;
@@ -84,30 +106,30 @@ BigInteger::BigInteger(std::string s) {
 		}
 
 		if (carry > 0) {
-			digits.push_back(carry);
+			digits.push_back(static_cast<uint32_t>(carry));
 		}
 	}
 
 	std::reverse(digits.begin(), digits.end());
 
 	for (auto e : digits) {
-		m_digits.push_back(e);
+		addWord(e);
 	}
 }
 
 template <typename T>
 BigInteger::BigInteger(const std::vector<T>& input) {
 	m_sign = 1;
-	m_digits.clear();
+	m_words.clear();
 	std::size_t i = 0;
-	for (i; i < input.size(); i++) {
+	for (; i < input.size(); i++) {
 		if (input[i] != 0) break;
 	}
-	for (i; i < input.size(); i++) {
-		m_digits.push_back(static_cast<uint32_t>(input[i]));
+	for (; i < input.size(); i++) {
+		m_words.push_back(static_cast<uint32_t>(input[i]));
 	}
 
-	if (m_digits.size() == 0) {
+	if (m_words.size() == 0) {
 		m_sign = 0;
 	}
 }
@@ -117,7 +139,7 @@ BigInteger::BigInteger(const std::vector<T>& input) {
 // Copy constructors
 BigInteger::BigInteger(const BigInteger& other)
 	: m_sign(other.m_sign)
-    , m_digits(other.m_digits) // std::vector deep-copies automatically
+    , m_words(other.m_words) // std::vector deep-copies automatically
     {}
 
 // Copy asignment
@@ -126,14 +148,14 @@ BigInteger& BigInteger::operator=(const BigInteger& other) {
 		return *this;
    }
    m_sign = other.m_sign;
-   m_digits = other.m_digits;
+   m_words = other.m_words;
    return *this;
 }
 
 // Move constructor
 BigInteger::BigInteger(BigInteger&& other) noexcept
 	: m_sign(other.m_sign)
-	, m_digits(std::move(other.m_digits))
+	, m_words(std::move(other.m_words))
 	{}
 
 // Move assignement
@@ -142,14 +164,14 @@ BigInteger& BigInteger::operator=(BigInteger&& other) noexcept {
         return *this;
     }
     m_sign = other.m_sign;
-	m_digits = std::move(other.m_digits);
+	m_words = std::move(other.m_words);
 	return *this;
 }
 
 // ---------------- Helpers & Observers ----------------
 
-int BigInteger::numberOfDigits() const { 
-	return static_cast<int>(m_digits.size());
+std::size_t BigInteger::numberOfWords() const { 
+	return m_words.size();
 }
 
 std::string BigInteger::toString() const {
@@ -157,14 +179,14 @@ std::string BigInteger::toString() const {
 		return "0";
 	}
 
-	std::vector<long long> res;
+	std::vector<uint64_t> res;
 
 	res.push_back(0);
 
-	long long carry = 0;
+	uint64_t carry = 0;
 
-	for (std::size_t i = 0; i < m_digits.size(); i++) {
-		carry = m_digits[i];
+	for (std::size_t i = 0; i < m_words.size(); i++) {
+		carry = m_words[i];
 
 		for (std::size_t j = 0; j < res.size(); j++) {
 			res[j] = res[j] * BASE + carry;
@@ -193,11 +215,16 @@ std::string BigInteger::toString() const {
 	return result;
 }
 
-void BigInteger::printDigits() const {
+template<typename T>
+void BigInteger::addWord(T digit) {
+	m_words.push_back(static_cast<uint32_t>(digit));
+}
+
+void BigInteger::printWords() const {
 	std::cout << "[";
-	for (std::size_t i = 0; i < m_digits.size(); i++) {
-		std::cout << m_digits[i];
-		if (i + 1 < m_digits.size()) {
+	for (std::size_t i = 0; i < m_words.size(); i++) {
+		std::cout << m_words[i];
+		if (i + 1 < m_words.size()) {
 			std::cout << ", ";
 		}
 	}
@@ -214,111 +241,157 @@ bool BigInteger::isNull() const {
 	return m_sign == 0;
 }
 
-// ---------------- Absolute arithmetic helpers ----------------
+// ---------------- Absolute Arithmetic helpers ----------------
 
-// Addition
+/** 
+ * Addition on |x| + |y|
+ * 
+ * Perform the schoolbook addition:
+ * - loop on each digits
+ * - add them 
+ * - roll over a carry
+ * 
+ * Returns a BigInteger
+ * 
+ * Complexity = O(max(x.numberOfWords(), y.numberOfWords()))
+ *  
+ */
+
 BigInteger additionAbsolute(const BigInteger& x, const BigInteger& y) {
-	int nx = x.numberOfDigits();
-	int ny = y.numberOfDigits();
+	std::size_t nx = x.numberOfWords();
+	std::size_t ny = y.numberOfWords();
 
-	int length = std::max(nx, ny);
-	std::vector<unsigned long long> input(length + 1, 0);
+	std::size_t length = std::max(nx, ny);
+	std::vector<uint64_t> input(length + 1, 0);
 
-	int xIte = nx - 1;
-	int yIte = ny - 1;
+	std::size_t xIte = nx;
+	std::size_t yIte = ny;
 
-	long long carry = 0;
+	uint64_t carry = 0;
 
-	for (int i = length; i >= 0; i--) {
-		long long val = carry;
-		if (xIte >= 0) {
-			val += x.m_digits[xIte];
-			xIte--;
-		}
-		if (yIte >= 0) {
-			val += y.m_digits[yIte];
-			yIte--;
-		}
+	for (std::size_t i = 0; i <= length; i++) {
+		uint64_t val = carry;
+		if (xIte > 0) val += x.m_words[--xIte];
+		if (yIte > 0) val += y.m_words[--yIte];
 
+		input[length - i] = val % BigInteger::BASE;
 		carry = val / BigInteger::BASE;
-		input[i] = val % BigInteger::BASE;
 	}
+
 	return BigInteger(input);
 }
 
-// Substraction
-// Assumes that |x| >= |y|
+/** 
+ * Substraction on |x| - |y|
+ * 
+ * Condition: |x| > |y|
+ * 
+ * Perform the schoolbook substraction:
+ * - loop on each digits
+ * - substract y[i] from x[i] 
+ * - roll over a borrow if the result of the above step is negative
+ * 
+ * Returns a BigInteger
+ * 
+ * Complexity = O(max(x.numberOfWords(), y.numberOfWords()))
+ */
 BigInteger substractionAbsolute(const BigInteger& x, const BigInteger& y) {
-	int nx = x.numberOfDigits();
-	int ny = y.numberOfDigits();
+	std::size_t nx = x.numberOfWords();
+	std::size_t ny = y.numberOfWords();
 
-	int length = std::max(nx, ny);
-	std::vector<unsigned long long> input(length, 0);
+	std::size_t length = (std::max(nx, ny));
+	std::vector<int64_t> input(length, 0);
 
-	int xIte = nx - 1;
-	int yIte = ny - 1;
+	std::size_t xIte = nx;
+	std::size_t yIte = ny;
 
-	long long borrow = 0;
+	int64_t borrow = 0;
 
-	for (int i = length - 1; i >= 0; i--) {
-		long long val = -borrow;
-		if (xIte >= 0) {
-			val += x.m_digits[xIte];
-			xIte--;
+	for (std::size_t i = 0; i < length; i++) {
+		int64_t val = -borrow;
+		if (xIte > 0) {
+			val += x.m_words[--xIte];
+		} 
+		if (yIte > 0) {
+			val -= y.m_words[--yIte];
 		}
-		if (yIte >= 0) {
-			val -= y.m_digits[yIte];
-			yIte--;
-		}
-
+		borrow = 0;
 		if (val < 0) {
 			val += BigInteger::BASE;
 			borrow = 1; 
 		}
-		else {
-			borrow = 0;
-		}
-		input[i] = val;
+		input[length - 1 - i] = val;
 	}
 
 	return BigInteger(input);
 }
 
-// Multiplication
+/** 
+ * Multiplication on |x| * |y|
+ *  
+ * Perform the schoolbook multiplication:
+ * - loop on each digits of x
+ * - loop on each digits of y
+ * - perform the multiplication of each pair of digits
+ * - roll over a carry
+ * 
+ * Returns a BigInteger
+ * 
+ * Complexity = O(x.numberOfWords() * y.numberOfWords())
+ *  
+ */
 BigInteger multiplicationAbsolute(const BigInteger& x, const BigInteger& y) {
 	if (x.isNull() || y.isNull()) return BigInteger(0);
-    int nx = x.numberOfDigits();
-    int ny = y.numberOfDigits();
 
-    std::vector<unsigned long long> input(nx + ny, 0);
+    std::size_t nx = x.numberOfWords();
+    std::size_t ny = y.numberOfWords();
 
-    unsigned long long carry = 0;
+    std::vector<uint64_t> input(nx + ny, 0);
 
-    for (int i = nx - 1; i >= 0; --i) {
-        for (int j = ny - 1; j >= 0; --j) {
-            int k = i + j + 1;
-			unsigned long long val = (unsigned long long)x.m_digits[i] * (unsigned long long)y.m_digits[j] + carry;
-			input[k] += val;
+    uint64_t carry = 0;
+
+    for (std::size_t i = 0; i < nx; i++) {
+    	for (std::size_t j = 0; j < ny; j++) {
+    		std::size_t k = nx + ny - 1 - i - j;
+
+    		uint64_t val = (uint64_t)x.m_words[nx - 1 - i] * (uint64_t)y.m_words[ny - 1 - j];
+    		val += carry;
+
+    		input[k] += val;
 			carry = input[k] / BigInteger::BASE;
             input[k] %= BigInteger::BASE;
-        }
-        input[i] += carry;
+
+    	}
+        input[nx - 1 - i] += carry;
         carry = 0;
     }
 
 	return BigInteger(input);
 }
 
-// short divison algorithm that can be used when the number of digits of v is 1
-std::pair<BigInteger, BigInteger> shortDivision(BigInteger u, BigInteger v) {
-	std::vector<unsigned long long> quotient;
+/** 
+ * Division on |x| / |y|
+ * 
+ * Condition: v has only 1 digit; i.e. it's less or equal than B (2^32)
+ *  
+ * Perform the short division algorithm:
+ * - loop on each digits of u
+ * - perform the long division when it's able and store the result
+ * 
+ * Returns a pair<BigInteger, BigInteger> = quotient, remainder
+ * 
+ * Complexity = O(u.numberOfWords())
+ *  
+*/
+std::pair<BigInteger, BigInteger> shortDivision(const BigInteger& u, const BigInteger& v) {
+	std::vector<uint64_t> quotient;
 
-	unsigned long long divisor = v.m_digits[0];
-	unsigned long long remainder = 0;
+	uint64_t divisor = v.m_words[0];
+	uint64_t remainder = 0;
 
-	for (std::size_t i = 0; i < u.numberOfDigits(); i++) {
-		remainder = remainder * BigInteger::BASE + u.m_digits[i];
-		unsigned long long q = remainder / divisor;
+	for (std::size_t i = 0; i < u.numberOfWords(); i++) {
+		remainder = remainder * BigInteger::BASE + u.m_words[i];
+		uint64_t q = remainder / divisor;
 		quotient.push_back(q);
 		remainder %= divisor;
 	}
@@ -332,51 +405,61 @@ std::pair<BigInteger, BigInteger> shortDivision(BigInteger u, BigInteger v) {
  * 
 */	
 
+
+/** 
+ * Knuth Division Algorithm D (from TAOCP Vol. 2 §4.3.1)Division
+ * 
+ * Condition: v != 0
+ * 
+ * Complexity = O(u.numberOfWords() * v.numberOfWords())
+ *  
+*/
+
 std::pair<BigInteger, BigInteger> divideAndRemainder(const BigInteger& u_init, const BigInteger& v_init) {
 
 	if (v_init.isNull()) {
 		throw std::runtime_error("BigInteger: division by zero");
 	}
 
-	std::vector<unsigned long long> quotient;
+	std::vector<uint64_t> quotient;
 
 	BigInteger u(u_init);
 	BigInteger v(v_init);
 
 	// perform int division
-	if (u.numberOfDigits() == 1 && v.numberOfDigits() == 1) {
+	if (u.numberOfWords() == 1 && v.numberOfWords() == 1) {
 
-		int q = u.m_digits[0] / v.m_digits[0];
-		int r =  u.m_digits[0] % v.m_digits[0];
+		uint64_t q = u.m_words[0] / v.m_words[0];
+		uint64_t r =  u.m_words[0] % v.m_words[0];
 		return {BigInteger(q), BigInteger(r)};
 	}
 
 	// perform short division
-	if (v.numberOfDigits() == 1) {
+	if (v.numberOfWords() == 1) {
 		return shortDivision(u, v);
 	}
 
 	// from now on n >= 2
 
-	int n = v.numberOfDigits();
-	int m = u.numberOfDigits() - n;
+	std::size_t n = v.numberOfWords();
+	std::size_t m = u.numberOfWords() - n;
 
 	// D1 [Normalize] Ensure that v_{n - 1} > BASE / 2
 	// shift the digits to the left so the MSB is set to 1
 
-	long long d = 1ll << __builtin_clz(v.m_digits[0]);
+	uint64_t d = 1ll << __builtin_clz(v.m_words[0]);
 
 	u = multiplicationAbsolute(u, BigInteger(d));
 	v = multiplicationAbsolute(v, BigInteger(d));
 
 	std::vector<uint32_t> currv;
-	for (int i = 0; i < n - 1; i++) {
-		currv.push_back(u.m_digits[i]);
+	for (std::size_t i = 0; i < n - 1; i++) {
+		currv.push_back(u.m_words[i]);
 	}
 
-	int shift = 0;
-	if (u.numberOfDigits() > n + m) {
-		currv.push_back(u.m_digits[n - 1]);
+	std::size_t shift = 0;
+	if (u.numberOfWords() > n + m) {
+		currv.push_back(u.m_words[n - 1]);
 		shift++;
 	}
 
@@ -384,32 +467,32 @@ std::pair<BigInteger, BigInteger> divideAndRemainder(const BigInteger& u_init, c
 
 	// D2 [Initialization]
 	for (std::size_t j = 0; j <= m; j++) {
-		curr.m_digits.push_back(u.m_digits[n - 1 + shift + j]);
+		curr.addWord(u.m_words[n - 1 + shift + j]);
 
-		unsigned long long u0 = 0;
-		unsigned long long u1 = 0;
-		unsigned long long u2 = 0;
+		uint64_t u0 = 0;
+		uint64_t u1 = 0;
+		uint64_t u2 = 0;
 
-		if (curr.m_digits.size() >= n + 1) {
-			u0 = curr.m_digits[0];
-			u1 = curr.m_digits[1];
-			u2 = curr.m_digits[2];
+		if (curr.numberOfWords() >= n + 1) {
+			u0 = curr.m_words[0];
+			u1 = curr.m_words[1];
+			u2 = curr.m_words[2];
 		}
-		else if (curr.m_digits.size() >= n) {
-			u1 = curr.m_digits[0];
-			u2 = curr.m_digits[1];
+		else if (curr.numberOfWords() >= n) {
+			u1 = curr.m_words[0];
+			u2 = curr.m_words[1];
 		}
 
 		//debug(u0, u1, u2);
 
 		// D3 [Calculate q_hat]
 		// q_hat is the initial guess. from the Theroem B: q_hat - 2 <= q <= q_hat
-		unsigned long long q_hat = (u0 * BigInteger::BASE + u1) / v.m_digits[0];
-		unsigned long long r_hat = (u0 * BigInteger::BASE + u1) % v.m_digits[0];
+		uint64_t q_hat = (u0 * BigInteger::BASE + u1) / v.m_words[0];
+		uint64_t r_hat = (u0 * BigInteger::BASE + u1) % v.m_words[0];
 
-		while (q_hat >= BigInteger::BASE || q_hat * v.m_digits[1] > (BigInteger::BASE * r_hat + u2)) {
+		while (q_hat >= BigInteger::BASE || q_hat * v.m_words[1] > (BigInteger::BASE * r_hat + u2)) {
 			q_hat -= 1;
-			r_hat += v.m_digits[0];
+			r_hat += v.m_words[0];
 			if (r_hat >= BigInteger::BASE) break;
 		}
 
@@ -477,7 +560,7 @@ BigInteger& BigInteger::operator+=(const BigInteger& other) {
 		m_sign = other.m_sign;
 	}
 
-	if (m_digits.empty()) {
+	if (m_words.empty()) {
 		m_sign = 0;
 	}
 
@@ -554,7 +637,7 @@ BigInteger operator%(const BigInteger& x, const BigInteger& y) {
 
 // comparison operators
 bool operator==(const BigInteger& x, const BigInteger& y) {
-	return x.m_sign == y.m_sign && x.m_digits == y.m_digits;
+	return x.m_sign == y.m_sign && x.m_words == y.m_words;
 }
 
 bool operator!=(const BigInteger& x, const BigInteger& y) {
@@ -562,11 +645,11 @@ bool operator!=(const BigInteger& x, const BigInteger& y) {
 }
 
 bool operator<(const BigInteger& x, const BigInteger& y) {
-   	if (x.numberOfDigits() < y.numberOfDigits()) return true;
-   	if (x.numberOfDigits() > y.numberOfDigits()) return false;
-   	for (int i = 0; i < x.numberOfDigits(); i++) {
-       	if (x.m_digits[i] < y.m_digits[i]) return true;
-        if (x.m_digits[i] > y.m_digits[i]) return false;
+   	if (x.numberOfWords() < y.numberOfWords()) return true;
+   	if (x.numberOfWords() > y.numberOfWords()) return false;
+   	for (std::size_t i = 0; i < x.numberOfWords(); i++) {
+       	if (x.m_words[i] < y.m_words[i]) return true;
+        if (x.m_words[i] > y.m_words[i]) return false;
    	}
    	return false;
 }
@@ -596,6 +679,6 @@ std::istream& operator>>(std::istream& is, BigInteger& x) {
 
 void swap(BigInteger& x, BigInteger& y) noexcept {
 	std::swap(x.m_sign, y.m_sign);
-	std::swap(x.m_digits, y.m_digits);
+	std::swap(x.m_words, y.m_words);
 }
 

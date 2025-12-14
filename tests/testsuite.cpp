@@ -238,7 +238,7 @@ void testMultiplication() {
 		BigInteger u(input[0]);
 		BigInteger v(input[1]);
 		BigInteger res = u * v;
-		std::string testName = input[0] + " + " + input[1] + " = " + input[2];
+		std::string testName = input[0] + " x " + input[1] + " = " + input[2];
 		expectEqual(res.toString(), input[2], testName);
 	}
 }
