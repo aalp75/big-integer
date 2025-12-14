@@ -23,7 +23,7 @@ BigInteger::BigInteger(int val) {
 BigInteger::BigInteger(unsigned int val) {
 	if (val == 0) { m_sign = 0; return; }
 	m_sign = 1;
-	m_words.push_back(static_cast<uint32_t>(val));
+	addWord(val);
 }
 
 BigInteger::BigInteger(long val) {
@@ -88,6 +88,10 @@ BigInteger::BigInteger(std::string s) {
 	}
 
 	s = sCleaned;
+
+	if (s.empty()) {
+		throw std::invalid_argument("BigInteger: empty string");
+	}
 
 	std::size_t n = s.size();
 	std::vector<uint64_t> digits;
@@ -346,6 +350,10 @@ BigInteger multiplicationAbsolute(const BigInteger& x, const BigInteger& y) {
     std::size_t nx = x.numberOfWords();
     std::size_t ny = y.numberOfWords();
 
+    //if (nx >= BigInteger::KARATSUBA_THRESHOLD && ny >= BigInteger::KARATSUBA_THRESHOLD) {
+    	//return karatsubaMultiplication(x, y);
+    //}
+
     std::vector<uint64_t> input(nx + ny, 0);
 
     uint64_t carry = 0;
@@ -367,6 +375,20 @@ BigInteger multiplicationAbsolute(const BigInteger& x, const BigInteger& y) {
     }
 
 	return BigInteger(input);
+}
+
+/** 
+ * Multiplication on |x| * |y|
+ * 
+ * Returns a BigInteger
+ * 
+ * Complexity = ...
+ *  
+ */
+
+BigInteger karatsubaMultiplication(const BigInteger& x, const BigInteger& y) {
+
+	return BigInteger();
 }
 
 /** 
@@ -500,6 +522,7 @@ std::pair<BigInteger, BigInteger> divideAndRemainder(const BigInteger& u_init, c
 		else { // D6 [Add Back]
 			// this step is very rare, it only happends with probability 1 / (2 ^ 31)
 			// specific tests need to be written for this case
+			std::cout << "\n\n\n[Add Back]\n\n\n";
 			q_hat--;
 			curr += v;
 			curr -= sub;
@@ -542,6 +565,8 @@ BigInteger& BigInteger::operator+=(const BigInteger& other) {
 		m_sign = other.m_sign;
 		return *this;
 	}
+
+	// signs are different
 
 	if (this->abs() >= other.abs()) {
 		*this = substractionAbsolute(*this, other);
@@ -636,11 +661,27 @@ bool operator!=(const BigInteger& x, const BigInteger& y) {
 }
 
 bool operator<(const BigInteger& x, const BigInteger& y) {
-   	if (x.numberOfWords() < y.numberOfWords()) return true;
-   	if (x.numberOfWords() > y.numberOfWords()) return false;
-   	for (std::size_t i = 0; i < x.numberOfWords(); i++) {
-       	if (x.m_words[i] < y.m_words[i]) return true;
-        if (x.m_words[i] > y.m_words[i]) return false;
+
+	if (x.isNull() && y.isNull()) return false;
+
+	if (x.m_sign < y.m_sign) return true;
+	if (x.m_sign > y.m_sign) return false;
+
+	if (x.m_sign == 1) {
+	   	if (x.numberOfWords() < y.numberOfWords()) return true;
+	   	if (x.numberOfWords() > y.numberOfWords()) return false;
+	   	for (std::size_t i = 0; i < x.numberOfWords(); i++) {
+	       	if (x.m_words[i] < y.m_words[i]) return true;
+	        if (x.m_words[i] > y.m_words[i]) return false;
+	   	}
+   	}
+   	else {
+	   	if (x.numberOfWords() < y.numberOfWords()) return false;
+	   	if (x.numberOfWords() > y.numberOfWords()) return true;
+	   	for (std::size_t i = 0; i < x.numberOfWords(); i++) {
+	       	if (x.m_words[i] < y.m_words[i]) return false;
+	        if (x.m_words[i] > y.m_words[i]) return true;
+	   	}		
    	}
    	return false;
 }

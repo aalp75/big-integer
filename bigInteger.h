@@ -31,8 +31,8 @@ public:
 	BigInteger(unsigned long val);
 	BigInteger(long long val);
 	BigInteger(unsigned long long val);
+
 	BigInteger(std::string s);
-	
 	template <typename T> BigInteger(const std::vector<T>& input);
 
 	// Observers & helpers
@@ -54,6 +54,7 @@ public:
     friend BigInteger additionAbsolute(const BigInteger& x, const BigInteger& y);
     friend BigInteger substractionAbsolute(const BigInteger& x, const BigInteger& y);
     friend BigInteger multiplicationAbsolute(const BigInteger& x, const BigInteger& y);
+    friend BigInteger karatsubaMultiplication(const BigInteger& x, const BigInteger& y);
     friend std::pair<BigInteger, BigInteger> shortDivision(const BigInteger& x, const BigInteger& y);
     friend std::pair<BigInteger, BigInteger> divideAndRemainder(const BigInteger& x, const BigInteger& y);
 
