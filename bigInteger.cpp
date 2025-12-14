@@ -381,7 +381,6 @@ BigInteger multiplicationAbsolute(const BigInteger& x, const BigInteger& y) {
  * Returns a pair<BigInteger, BigInteger> = quotient, remainder
  * 
  * Complexity = O(u.numberOfWords())
- *  
 */
 std::pair<BigInteger, BigInteger> shortDivision(const BigInteger& u, const BigInteger& v) {
 	std::vector<uint64_t> quotient;
@@ -398,13 +397,6 @@ std::pair<BigInteger, BigInteger> shortDivision(const BigInteger& u, const BigIn
 
 	return {BigInteger(quotient), BigInteger(remainder)};
 }
-
-/* Knuth Algorithm D (TAOCP Vol. 2 §4.3.1)
- * 
- * Division of u / v, e.g. 15 / 4 = {3, 2} because 15 = 4 * 3 + 2
- * 
-*/	
-
 
 /** 
  * Knuth Division Algorithm D (from TAOCP Vol. 2 §4.3.1)Division
@@ -447,11 +439,13 @@ std::pair<BigInteger, BigInteger> divideAndRemainder(const BigInteger& u_init, c
 	// D1 [Normalize] Ensure that v_{n - 1} > BASE / 2
 	// shift the digits to the left so the MSB is set to 1
 
+	// TODO: needs to be made more robust
 	uint64_t d = 1ll << __builtin_clz(v.m_words[0]);
 
 	u = multiplicationAbsolute(u, BigInteger(d));
 	v = multiplicationAbsolute(v, BigInteger(d));
 
+	// TODO: enhance this logic
 	std::vector<uint32_t> currv;
 	for (std::size_t i = 0; i < n - 1; i++) {
 		currv.push_back(u.m_words[i]);
@@ -469,6 +463,7 @@ std::pair<BigInteger, BigInteger> divideAndRemainder(const BigInteger& u_init, c
 	for (std::size_t j = 0; j <= m; j++) {
 		curr.addWord(u.m_words[n - 1 + shift + j]);
 
+		// TODO: enhance the computation of u0, u1 and u2
 		uint64_t u0 = 0;
 		uint64_t u1 = 0;
 		uint64_t u2 = 0;
@@ -483,10 +478,8 @@ std::pair<BigInteger, BigInteger> divideAndRemainder(const BigInteger& u_init, c
 			u2 = curr.m_words[1];
 		}
 
-		//debug(u0, u1, u2);
-
 		// D3 [Calculate q_hat]
-		// q_hat is the initial guess. from the Theroem B: q_hat - 2 <= q <= q_hat
+		// q_hat is the initial guess; from the Theorem B we know that q_hat - 2 <= q <= q_hat
 		uint64_t q_hat = (u0 * BigInteger::BASE + u1) / v.m_words[0];
 		uint64_t r_hat = (u0 * BigInteger::BASE + u1) % v.m_words[0];
 
@@ -505,7 +498,7 @@ std::pair<BigInteger, BigInteger> divideAndRemainder(const BigInteger& u_init, c
 			curr -= sub;
 		}
 		else { // D6 [Add Back]
-			// this step is very rare, it only appends with probabably 1 / (2 ^ 31)
+			// this step is very rare, it only happends with probability 1 / (2 ^ 31)
 			// specific tests need to be written for this case
 			q_hat--;
 			curr += v;
@@ -514,11 +507,10 @@ std::pair<BigInteger, BigInteger> divideAndRemainder(const BigInteger& u_init, c
 
 		quotient.push_back(q_hat);
 
-		// D7 [Loop on j]
-	}
+	} // D7 [Loop on j]
 
 	// D8 [Unormalize]
-	// find remainder by running shortDivision algorithm on the normalization factor d
+	// find the remainder by running shortDivision algorithm on the normalization factor d
 	BigInteger remainder(curr);
 
 	std::pair<BigInteger, BigInteger> res = shortDivision(curr, BigInteger(d));
@@ -602,7 +594,6 @@ BigInteger& BigInteger::operator*=(const BigInteger& other) {
 	return *this;
 }
 
-
 BigInteger& BigInteger::operator/=(const BigInteger& other) {
 	int finalSign = m_sign * other.m_sign;
 	*this = divideAndRemainder(*this, other).first;
@@ -681,4 +672,3 @@ void swap(BigInteger& x, BigInteger& y) noexcept {
 	std::swap(x.m_sign, y.m_sign);
 	std::swap(x.m_words, y.m_words);
 }
-
