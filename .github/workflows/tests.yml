@@ -1,0 +1,24 @@
+name: C++ tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++
+
+      - name: Make test script executable
+        run: chmod +x tests/runtests.sh
+
+      - name: Run tests
+        run: ./tests/runtests.sh
