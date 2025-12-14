@@ -1,3 +1,5 @@
+[![tests](https://github.com/aalp75/big-integer/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/aalp75/big-integer/actions/workflows/tests.yml)
+
 ## BigInteger — Arbitrary-Precision Integer Class in C++
 
 `BigInteger` is a C++ class implementing arbitrarily large unsigned integers (limited only by available memory).  
