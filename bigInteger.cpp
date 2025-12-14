@@ -342,7 +342,6 @@ BigInteger substractionAbsolute(const BigInteger& x, const BigInteger& y) {
  * Returns a BigInteger
  * 
  * Complexity = O(x.numberOfWords() * y.numberOfWords())
- *  
  */
 BigInteger multiplicationAbsolute(const BigInteger& x, const BigInteger& y) {
 	if (x.isNull() || y.isNull()) return BigInteger(0);
@@ -387,6 +386,8 @@ BigInteger multiplicationAbsolute(const BigInteger& x, const BigInteger& y) {
  */
 
 BigInteger karatsubaMultiplication(const BigInteger& x, const BigInteger& y) {
+
+	std::cout << "run karatsuba multiplication\n";
 
 	return BigInteger();
 }

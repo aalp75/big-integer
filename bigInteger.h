@@ -8,8 +8,8 @@
 
 class BigInteger {
 
-// Representation: sign + words in base B (2^32), MSB-first.
-// Zero is invariant: m_sign == 0 ~&& m_words empty.
+// Representation: sign and words in base B (2^32), MSB-first
+// Zero is invariant: m_sign = 0 && m_words empty
 
 private:
 
@@ -18,7 +18,7 @@ private:
 
 	inline static constexpr int64_t SHIFT = 32;
 	inline static constexpr int64_t BASE = 1LL << SHIFT;
-	inline static constexpr int64_t BASE_MASK = (0xFFFFFFFF); // 2 ^ 32 - 1
+	inline static constexpr int64_t BASE_MASK = (0xFFFFFFFF); // 2^32 - 1
 	inline static constexpr int64_t KARATSUBA_THRESHOLD = 80;
 
 public:
@@ -33,13 +33,13 @@ public:
 	BigInteger(unsigned long long val);
 
 	BigInteger(std::string s);
-	template <typename T> BigInteger(const std::vector<T>& input);
+	template <typename T> BigInteger(const std::vector<T>& input); // TODO remove the template or implement in header
 
 	// Observers & helpers
 	std::size_t numberOfWords() const;
 	BigInteger abs() const;
 	std::string toString() const;
-	template<typename T> void addWord(T element);
+	template<typename T> void addWord(T element); // TODO remove the template or implement in header
 
 	bool isNull() const;
 	void printWords() const;
