@@ -1,41 +1,57 @@
 #include <iostream>
 #include <vector>
 #include <chrono>
+#include <random>
 #include "bigInteger.h"
 
 using BI = BigInteger;
 
 int main() {
 
+	std::vector<uint32_t> v1;
+	std::vector<uint32_t> v2;
+
+	std::mt19937_64 rng(42);
+
+	uint64_t BASE = (1LL << 32);
+
+	BigInteger x, y;
+
+	// random big numbers
+	for (int i = 0; i < 10; i++) {
+		v1.clear();
+		v2.clear();
+		for (int j = 0; j < 200; j++) {
+			v1.push_back(static_cast<uint32_t>(rng() % BASE));
+			v2.push_back(static_cast<uint32_t>(rng() % BASE));	
+		}
+		x = BigInteger(v1);
+		y = BigInteger(v2);
+
+		BigInteger expected = x * y;
+		BigInteger res = karatsubaMultiplication(x, y);
+	}
+
 	using clock = std::chrono::steady_clock;
-	
-
-	std::string s1;
-	for (int i = 0; i < 15; i++) {
-		s1 += "41878979874271489721438972143897214089721412748217474331415926535897932384626433832795";
-	}
-
-	std::string s2;
-	for (int i = 0; i < 15; i++) {
-		s2 += "2718281828459045235369889748274812748943987214897214897218947127412743144432";
-	}
-
-	std::cout << "len(s1) = " << s1.size() << "\nlen(s2) = " << s2.size() << '\n';
-
-	BI b1(s1);
-	BI b2(s2);
-
-	std::cout << "b1 = " << b1 << "\n\nb2 = " << b2 << '\n';
-
 	auto t0 = clock::now();
 
-	BI res = b1 * b2;
-	//auto res2 = b1 % b2;
-
-	std::cout << "\n\nres = " << res << '\n';
-	//std::cout << "r = " << res2 << '\n';
+	for (int i = 0; i < 1000; i++) {
+		BigInteger res = multiplicationAbsolute(x, y);
+	}
 
 	auto t1 = clock::now();
-    auto ms = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
-    std::cout << "Elapsed: " << ms << " ms\n";
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+    std::cout << "School book multplication - Elapsed: " << ms << " milliseconds\n";
+
+
+	using clock = std::chrono::steady_clock;
+	t0 = clock::now();
+
+	for (int i = 0; i < 1000; i++) {
+		BigInteger res = karatsubaMultiplication(x, y);
+	}
+
+	t1 = clock::now();
+    ms = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+    std::cout << "Karatsuba multplication - Elapsed: " << ms << " milliseconds\n";
 }

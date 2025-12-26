@@ -7,8 +7,9 @@
 It supports:
 
 - Unlimited integer size
-- Full operator overloading (`+`, `-`, `*`, `/`, `%`, comparisons, stream I/O, etc.)
+- Full operator overloading (`+`, `-`, `*`, `/`, `%`, `+=`, `-=`, `*=`, `/=`, `%=`, comparisons, I/O, etc...)
 - Base-2³² internal representation (`uint32_t` digits)
+- Karatsuba multiplication for very large numbers
 - Knuth’s long division algorithm (TAOCP 4.3.1)
 
 ---
@@ -21,7 +22,7 @@ Let **w** be the number of 32-bit words in the internal representation.
 |----------------|------------|-------|
 | Addition       | **O(w)**   | Classical schoolbook addition |
 | Subtraction    | **O(w)**   | Classical schoolbook substraction |
-| Multiplication | **O(w²)**  | Classical schoolbook multiplication |
+| Multiplication | **O(w²)** <br> **O(w^log₂(3))** | Classical schoolbook multiplication <br> Karatsuba multiplication (above a length threshold)|
 | Division       | **O(w²)**  | Knuth Algorithm D (TAOCP Vol. 2 §4.3.1) |
 
 ---

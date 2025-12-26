@@ -80,7 +80,6 @@ BigInteger::BigInteger(std::string s) {
 		m_sign = 1;
 	}
 
-	// clean the string
 	std::string sCleaned;
 
 	for (auto c : s) {
@@ -118,23 +117,6 @@ BigInteger::BigInteger(std::string s) {
 
 	for (auto e : digits) {
 		addWord(e);
-	}
-}
-
-template <typename T>
-BigInteger::BigInteger(const std::vector<T>& input) {
-	m_sign = 1;
-	m_words.clear();
-	std::size_t i = 0;
-	for (; i < input.size(); i++) {
-		if (input[i] != 0) break;
-	}
-	for (; i < input.size(); i++) {
-		m_words.push_back(static_cast<uint32_t>(input[i]));
-	}
-
-	if (m_words.size() == 0) {
-		m_sign = 0;
 	}
 }
 
@@ -219,11 +201,6 @@ std::string BigInteger::toString() const {
 	return result;
 }
 
-template<typename T>
-void BigInteger::addWord(T digit) {
-	m_words.push_back(static_cast<uint32_t>(digit));
-}
-
 void BigInteger::printWords() const {
 	std::cout << "[";
 	for (std::size_t i = 0; i < m_words.size(); i++) {
@@ -245,7 +222,9 @@ bool BigInteger::isNull() const {
 	return m_sign == 0;
 }
 
-// ---------------- Absolute Arithmetic helpers ----------------
+// ---------------- Absolute Arithmetic Helpers ----------------
+
+// Addition, Substraction, Multiplication, Division
 
 /** 
  * Addition on |x| + |y|
@@ -266,7 +245,7 @@ BigInteger additionAbsolute(const BigInteger& x, const BigInteger& y) {
 	std::size_t ny = y.numberOfWords();
 
 	std::size_t length = std::max(nx, ny);
-	std::vector<uint64_t> input(length + 1, 0);
+	std::vector<uint32_t> input(length + 1, 0);
 
 	std::size_t xIte = nx;
 	std::size_t yIte = ny;
@@ -304,7 +283,7 @@ BigInteger substractionAbsolute(const BigInteger& x, const BigInteger& y) {
 	std::size_t ny = y.numberOfWords();
 
 	std::size_t length = (std::max(nx, ny));
-	std::vector<int64_t> input(length, 0);
+	std::vector<uint32_t> input(length, 0);
 
 	std::size_t xIte = nx;
 	std::size_t yIte = ny;
@@ -324,7 +303,7 @@ BigInteger substractionAbsolute(const BigInteger& x, const BigInteger& y) {
 			val += BigInteger::BASE;
 			borrow = 1; 
 		}
-		input[length - 1 - i] = val;
+		input[length - 1 - i] = static_cast<uint32_t>(val);
 	}
 
 	return BigInteger(input);
@@ -349,9 +328,9 @@ BigInteger multiplicationAbsolute(const BigInteger& x, const BigInteger& y) {
     std::size_t nx = x.numberOfWords();
     std::size_t ny = y.numberOfWords();
 
-    //if (nx >= BigInteger::KARATSUBA_THRESHOLD && ny >= BigInteger::KARATSUBA_THRESHOLD) {
-    	//return karatsubaMultiplication(x, y);
-    //}
+    if (nx >= BigInteger::KARATSUBA_THRESHOLD && ny >= BigInteger::KARATSUBA_THRESHOLD) {
+    	return karatsubaMultiplication(x, y);
+    }
 
     std::vector<uint64_t> input(nx + ny, 0);
 
@@ -381,15 +360,70 @@ BigInteger multiplicationAbsolute(const BigInteger& x, const BigInteger& y) {
  * 
  * Returns a BigInteger
  * 
- * Complexity = ...
+ * Multiplication is based on karatsuba algorithm:
+ * - x = xHigh * B ^ middle + xLow
+ * - y = yHigh * B ^ middle + yHigh
+ * - x * y = z2 * B ^ (2 * middle) + z1 + B ^ middle + z0
+ * - z2 = xHigh * yHigh, z0 = xLow * yHigh ans z1 = (xLow + xHigh) * (yLow + yHigh) - z2 - z0
+ * - 3 small multiplications instead of 4 for classical schoolbook multplication
+ * 
+ * Complexity = O(max(x.numberOfWords(), y.numberOfWords() ) ^ log2(3)) ~ n ^ 1.59
  *  
  */
 
 BigInteger karatsubaMultiplication(const BigInteger& x, const BigInteger& y) {
 
-	std::cout << "run karatsuba multiplication\n";
+	std::size_t nx = x.numberOfWords();
+	std::size_t ny = y.numberOfWords();
 
-	return BigInteger();
+	if (std::min(nx, ny) <= BigInteger::KARATSUBA_THRESHOLD) {
+		return multiplicationAbsolute(x, y);
+	}
+
+	std::size_t n = std::max(nx, ny);
+	std::size_t middle = n / 2;
+
+	// split x and y
+	std::vector<uint32_t> wordsXLow, wordsXHigh, wordsYLow, wordsYHigh;
+
+	for (std::size_t i = 0; i < nx; i++) {
+		if (i + middle < nx) {
+			wordsXHigh.push_back(x.m_words[i]);
+		}
+		else {
+			wordsXLow.push_back(x.m_words[i]);
+		}
+	}
+
+	for (std::size_t i = 0; i < ny; i++) {
+		if (i + middle < ny) {
+			wordsYHigh.push_back(y.m_words[i]);	
+		}
+		else {
+			wordsYLow.push_back(y.m_words[i]);
+		}
+	}
+
+	BigInteger xLow(wordsXLow), xHigh(wordsXHigh), yLow(wordsYLow), yHigh(wordsYHigh);
+
+	// recursive multiplications
+	BigInteger z0 = karatsubaMultiplication(xLow, yLow);
+	BigInteger z2 = karatsubaMultiplication(xHigh, yHigh);
+
+    BigInteger sumX = xLow + xHigh;
+    BigInteger sumY = yLow + yHigh;
+
+	BigInteger z3 = karatsubaMultiplication(sumX, sumY);
+
+	BigInteger z1 = z3 - z2 - z0;
+
+	// shift and combine the reults
+	z1.m_words.insert(z1.m_words.end(), middle, 0);
+	z2.m_words.insert(z2.m_words.end(), 2 * middle, 0);
+
+	BigInteger res = z2 + z1 + z0;
+
+	return res;
 }
 
 /** 
@@ -403,8 +437,10 @@ BigInteger karatsubaMultiplication(const BigInteger& x, const BigInteger& y) {
  * 
  * Returns a pair<BigInteger, BigInteger> = quotient, remainder
  * 
- * Complexity = O(u.numberOfWords())
-*/
+ * Complexity = O(u.numberOfWords()) 
+ * 
+ */
+
 std::pair<BigInteger, BigInteger> shortDivision(const BigInteger& u, const BigInteger& v) {
 	std::vector<uint64_t> quotient;
 

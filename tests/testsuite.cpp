@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <random>
 #include "../bigInteger.h"
 
 const char* GREEN = "\033[32m";
@@ -35,7 +36,7 @@ void testConstructorsAndToString() {
 		{"+41,414,784", "41414784"}
 	};
 
-	std::cout << "\n===== Constructors tests =====\n";
+	std::cout << "\n===== Constructors Tests =====\n";
 
 	for (auto input : inputs) {
 		BigInteger res(input[0]);
@@ -128,7 +129,7 @@ void testAddition() {
 	    {"7848339694775159179533", "-51352", "7848339694775159128181"},
 	};
 
-	std::cout << "\n===== Addition tests =====\n";
+	std::cout << "\n===== Addition Tests =====\n";
 
 	for (auto input : inputs) {
 		BigInteger u(input[0]);
@@ -186,7 +187,7 @@ void testSubstraction() {
 	     "31415926535897932384626433832795"}
 	};
 
-	std::cout << "\n===== Substraction tests =====\n";
+	std::cout << "\n===== Substraction Tests =====\n";
 
 	for (auto input : inputs) {
 		BigInteger u(input[0]);
@@ -231,8 +232,10 @@ void testMultiplication() {
 	        "-18446744073709551616", 
 	        "-340282366920938463463374607431768211456"
 	    }
+	    // karatsuba multiplication, above threshold (>= 80)
+
 	};
-	std::cout << "\n===== Multiplication tests =====\n";
+	std::cout << "\n===== Multiplication Tests =====\n";
 
 	for (auto input : inputs) {
 		BigInteger u(input[0]);
@@ -241,6 +244,49 @@ void testMultiplication() {
 		std::string testName = input[0] + " x " + input[1] + " = " + input[2];
 		expectEqual(res.toString(), input[2], testName);
 	}
+}
+
+void testKaratsubaMultiplication() {
+
+	std::cout << "\n===== Karatsuba Multplication Tests =====\n";
+	std::vector<uint32_t> v1;
+	std::vector<uint32_t> v2;
+
+	std::mt19937_64 rng(42);
+
+	uint64_t BASE = (1LL << 32);
+
+	// random big numbers
+	for (int i = 0; i < 10; i++) {
+		v1.clear();
+		v2.clear();
+		for (int j = 0; j < 100; j++) {
+			v1.push_back(static_cast<uint32_t>(rng() % BASE));
+			v2.push_back(static_cast<uint32_t>(rng() % BASE));	
+		}
+		BigInteger x(v1);
+		BigInteger y(v2);
+
+		BigInteger expected = x * y;
+		BigInteger res = karatsubaMultiplication(x, y);
+
+		expectEqual(res.toString(), expected.toString(), "Karatsuba Multiplication");
+	}
+
+	// [2 ^ 32 - 1, 2 ^ 32 - 1, ..., 2 ^ 32 - 1]
+	v1.clear();
+	v2.clear();
+	for (int j = 0; j < 120; j++) {
+		v1.push_back(0xFFFFFFFF);
+		v2.push_back(0xFFFFFFFF);
+	}
+	BigInteger x(v1);
+	BigInteger y(v2);
+	
+	BigInteger expected = x * y;
+	BigInteger res = karatsubaMultiplication(x, y);
+
+	expectEqual(res.toString(), expected.toString(), "Karatsuba Multiplication");
 }
 
 void testDivision() {
@@ -307,7 +353,7 @@ void testDivision() {
 	    }
 	};
 
-	std::cout << "\n===== Division tests =====\n";
+	std::cout << "\n===== Division Tests =====\n";
 
 	for (auto input : inputs) {
 		BigInteger u(input[0]);
@@ -328,6 +374,7 @@ int main() {
     testAddition();
     testSubstraction();
     testMultiplication();
+    testKaratsubaMultiplication();
     testDivision();
 
     

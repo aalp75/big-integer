@@ -8,7 +8,7 @@
 
 class BigInteger {
 
-// Representation: sign and words in base B (2^32), MSB-first
+// Representation: sign and words in base B (2^32), Most Significant Bit first
 // Zero is invariant: m_sign = 0 && m_words empty
 
 private:
@@ -33,14 +33,32 @@ public:
 	BigInteger(unsigned long long val);
 
 	BigInteger(std::string s);
-	template <typename T> BigInteger(const std::vector<T>& input); // TODO remove the template or implement in header
+
+	template <typename T>
+	BigInteger(const std::vector<T>& input) {
+		m_sign = 1;
+		m_words.clear();
+		std::size_t i = 0;
+		for (; i < input.size(); i++) {
+			if (input[i] != 0) break;
+		}
+		for (; i < input.size(); i++) {
+			m_words.push_back(static_cast<uint32_t>(input[i]));
+		}
+
+		if (m_words.size() == 0) {
+			m_sign = 0;
+		}
+	}
 
 	// Observers & helpers
 	std::size_t numberOfWords() const;
 	BigInteger abs() const;
 	std::string toString() const;
-	template<typename T> void addWord(T element); // TODO remove the template or implement in header
-
+	template <typename T>
+	void addWord(T digit) {
+		m_words.push_back(static_cast<uint32_t>(digit));
+	}
 	bool isNull() const;
 	void printWords() const;
 	
@@ -100,8 +118,6 @@ public:
 
 	// Swap
 	friend void swap(BigInteger& x, BigInteger& y) noexcept;
-
-
 };
 
 #endif
