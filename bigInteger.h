@@ -21,6 +21,11 @@ private:
 	inline static constexpr int64_t BASE_MASK = (0xFFFFFFFF); // 2^32 - 1
 	inline static constexpr int64_t KARATSUBA_THRESHOLD = 80;
 
+	// private method
+
+	bool isNull() const;
+	void printWords() const;
+
 public:
 
 	// Constructors (no explicit keyword for now to support implicit cast such that BigInteger("63") * 67)
@@ -32,25 +37,10 @@ public:
 	BigInteger(long long val);
 	BigInteger(unsigned long long val);
 
+	BigInteger(const std::vector<uint32_t>& input);
 	BigInteger(std::string s);
-
-	// TODO: change to vector<uint32_t>
-	template <typename T>
-	BigInteger(const std::vector<T>& input) {
-		m_sign = 1;
-		m_words.clear();
-		std::size_t i = 0;
-		for (; i < input.size(); i++) {
-			if (input[i] != 0) break;
-		}
-		for (; i < input.size(); i++) {
-			m_words.push_back(static_cast<uint32_t>(input[i]));
-		}
-
-		if (m_words.size() == 0) {
-			m_sign = 0;
-		}
-	}
+	BigInteger(const char* s);
+	
 
 	// Observers & helpers
 	std::size_t numberOfWords() const;
@@ -60,8 +50,6 @@ public:
 	void addWord(T digit) {
 		m_words.push_back(static_cast<uint32_t>(digit));
 	}
-	bool isNull() const;
-	void printWords() const;
 	
 	BigInteger(const BigInteger& other); // copy constructor
     BigInteger& operator=(const BigInteger& other); // copy assignement
@@ -71,7 +59,7 @@ public:
 
     // Core helper functions implementing the computation logic on absolute values
     friend BigInteger additionAbsolute(const BigInteger& x, const BigInteger& y);
-    friend BigInteger substractionAbsolute(const BigInteger& x, const BigInteger& y);
+    friend BigInteger subtractionAbsolute(const BigInteger& x, const BigInteger& y);
     friend BigInteger multiplicationAbsolute(const BigInteger& x, const BigInteger& y);
     friend BigInteger karatsubaMultiplication(const BigInteger& x, const BigInteger& y);
     friend std::pair<BigInteger, BigInteger> shortDivision(const BigInteger& x, const BigInteger& y);

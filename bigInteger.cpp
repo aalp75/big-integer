@@ -48,7 +48,7 @@ BigInteger::BigInteger(unsigned long val) {
 BigInteger::BigInteger(long long val) {
 	if (val == 0) { m_sign = 0; return; }
 	m_sign = (val < 0) ? -1 : 1;
-	if (val < 0) val = -val;
+	if (val < 0) val = std::abs(val);
 	if ((val >> 32) > 0) {
 		addWord(val >> 32);
 	}
@@ -56,11 +56,27 @@ BigInteger::BigInteger(long long val) {
 }
 
 BigInteger::BigInteger(unsigned long long val) {
-	m_sign = 1;
+	if (val == 0) { m_sign = 0; return; }
 	if ((val >> 32) > 0) {
 		m_words.push_back(static_cast<uint32_t>(val >> 32));
 	}
 	m_words.push_back(static_cast<uint32_t>(val & BASE_MASK));
+}
+
+BigInteger::BigInteger(const std::vector<uint32_t>& input) {
+	m_sign = 1;
+	m_words.clear();
+	std::size_t i = 0;
+	for (; i < input.size(); i++) {
+		if (input[i] != 0) break;
+	}
+	for (; i < input.size(); i++) {
+		m_words.push_back(static_cast<uint32_t>(input[i]));
+	}
+
+	if (m_words.size() == 0) {
+		m_sign = 0;
+	}
 }
 
 BigInteger::BigInteger(std::string s) {
@@ -90,6 +106,11 @@ BigInteger::BigInteger(std::string s) {
 
 	if (s.empty()) {
 		throw std::invalid_argument("BigInteger: empty string");
+	}
+	
+	if (s == "0") {
+		m_sign = 0;
+		return;
 	}
 
 	std::size_t n = s.size();
@@ -125,13 +146,13 @@ BigInteger::BigInteger(std::string s) {
 
 // ---------------- Copy, Move & Destructor ----------------
 
-// Copy constructors
+// Copy constructor
 BigInteger::BigInteger(const BigInteger& other)
 	: m_sign(other.m_sign)
     , m_words(other.m_words) // std::vector deep-copies automatically
     {}
 
-// Copy asignment
+// Copy assignment
 BigInteger& BigInteger::operator=(const BigInteger& other) {
    if (this == &other) {
 		return *this;
@@ -227,7 +248,7 @@ bool BigInteger::isNull() const {
 
 // ---------------- Absolute Arithmetic Helpers ----------------
 
-// Addition, Substraction, Multiplication, Division
+// Addition, subtraction, Multiplication, Division
 
 /** 
  * Addition on |x| + |y|
@@ -268,11 +289,11 @@ BigInteger additionAbsolute(const BigInteger& x, const BigInteger& y) {
 }
 
 /** 
- * Substraction on |x| - |y|
+ * subtraction on |x| - |y|
  * 
  * Condition: |x| > |y|
  * 
- * Perform the schoolbook substraction:
+ * Perform the schoolbook subtraction:
  * - loop on each digits
  * - substract y[i] from x[i] 
  * - roll over a borrow if the result of the above step is negative
@@ -281,7 +302,7 @@ BigInteger additionAbsolute(const BigInteger& x, const BigInteger& y) {
  * 
  * Complexity = O(max(x.numberOfWords(), y.numberOfWords()))
  */
-BigInteger substractionAbsolute(const BigInteger& x, const BigInteger& y) {
+BigInteger subtractionAbsolute(const BigInteger& x, const BigInteger& y) {
 	std::size_t nx = x.numberOfWords();
 	std::size_t ny = y.numberOfWords();
 
@@ -335,23 +356,23 @@ BigInteger multiplicationAbsolute(const BigInteger& x, const BigInteger& y) {
     	return karatsubaMultiplication(x, y);
     }
 
-    std::vector<uint64_t> input(nx + ny, 0);
+    std::vector<uint32_t> input(nx + ny, 0);
 
     uint64_t carry = 0;
 
     for (std::size_t i = 0; i < nx; i++) {
     	for (std::size_t j = 0; j < ny; j++) {
+
     		std::size_t k = nx + ny - 1 - i - j;
 
     		uint64_t val = (uint64_t)x.m_words[nx - 1 - i] * (uint64_t)y.m_words[ny - 1 - j];
     		val += carry;
+    		val += input[k];
 
-    		input[k] += val;
-			carry = input[k] / BigInteger::BASE;
-            input[k] %= BigInteger::BASE;
-
+    		input[k] = static_cast<uint32_t>(val % BigInteger::BASE);
+			carry = val / BigInteger::BASE;
     	}
-        input[nx - 1 - i] += carry;
+        input[nx - 1 - i] = static_cast<uint32_t>(carry);
         carry = 0;
     }
 
@@ -447,7 +468,7 @@ BigInteger karatsubaMultiplication(const BigInteger& x, const BigInteger& y) {
  */
 
 std::pair<BigInteger, BigInteger> shortDivision(const BigInteger& u, const BigInteger& v) {
-	std::vector<uint64_t> quotient;
+	std::vector<uint32_t> quotient;
 
 	uint64_t divisor = v.m_words[0];
 	uint64_t remainder = 0;
@@ -455,7 +476,7 @@ std::pair<BigInteger, BigInteger> shortDivision(const BigInteger& u, const BigIn
 	for (std::size_t i = 0; i < u.numberOfWords(); i++) {
 		remainder = remainder * BigInteger::BASE + u.m_words[i];
 		uint64_t q = remainder / divisor;
-		quotient.push_back(q);
+		quotient.push_back(static_cast<uint32_t>(q));
 		remainder %= divisor;
 	}
 
@@ -479,7 +500,7 @@ std::pair<BigInteger, BigInteger> divideAndRemainder(const BigInteger& u_init, c
 		throw std::runtime_error("BigInteger: division by zero");
 	}
 
-	std::vector<uint64_t> quotient;
+	std::vector<uint32_t> quotient;
 
 	BigInteger u(u_init);
 	BigInteger v(v_init);
@@ -572,7 +593,7 @@ std::pair<BigInteger, BigInteger> divideAndRemainder(const BigInteger& u_init, c
 			curr -= sub;
 		}
 
-		quotient.push_back(q_hat);
+		quotient.push_back(static_cast<uint32_t>(q_hat));
 
 	} // D7 [Loop on j]
 
@@ -613,11 +634,11 @@ BigInteger& BigInteger::operator+=(const BigInteger& other) {
 	// signs are different
 
 	if (this->abs() >= other.abs()) {
-		*this = substractionAbsolute(*this, other);
+		*this = subtractionAbsolute(*this, other);
 		m_sign = -other.m_sign;
 	}
 	else {
-		*this = substractionAbsolute(other, *this);
+		*this = subtractionAbsolute(other, *this);
 		m_sign = other.m_sign;
 	}
 
