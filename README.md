@@ -1,4 +1,4 @@
-[![tests](https://github.com/aalp75/big-integer/actions/workflows/tests.yml/badge.svg?branch=master&event=push)](https://github.com/aalp75/big-integer/actions/workflows/tests.yml)
+[![tests](https://github.com/aalp75/big-integer/actions/workflows/tests.yml/badge.svg)](https://github.com/aalp75/big-integer/actions/workflows/tests.yml)
 
 ## BigInteger — Arbitrary-Precision Integer Class in C++
 
