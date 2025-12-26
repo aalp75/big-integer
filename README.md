@@ -1,4 +1,4 @@
-[![tests](https://github.com/aalp75/big-integer/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/aalp75/big-integer/actions/workflows/tests.yml)
+[![tests](https://github.com/aalp75/big-integer/actions/workflows/tests.yml/badge.svg?branch=master&event=push)](https://github.com/aalp75/big-integer/actions/workflows/tests.yml)
 
 ## BigInteger — Arbitrary-Precision Integer Class in C++
 
@@ -30,20 +30,21 @@ Let **w** be the number of 32-bit words in the internal representation.
 ## Usage
 
 - Include the header: 
-    ```cpp
-    #include "bigInteger.h"
-    ```
+  ```cpp
+  #include "bigInteger.h
+  ```
 - Compile/link the implementation file bigInteger.cpp
     ```bash 
-    g++ -std=c++23 main.cpp bigInteger.cpp
+    g++ -std=c++23 -o main.cpp bigInteger.cpp
     ```
+
 ---
 
 ## Code Example (main.cpp)
 
 ```cpp
 #include <iostream>
-#include "bigInteger.h"
+#include "BigInteger.h"
 
 int main() {
     BigInteger b1("3141592653589793238462643");
