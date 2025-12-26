@@ -8,6 +8,17 @@ using BI = BigInteger;
 
 int main() {
 
+	BigInteger u("144659075040145311177374690267887710956");
+	BigInteger v("56343573548904472842532843271");
+
+	u.printWords();
+	v.printWords();
+
+	BigInteger d = u / v;
+	std::cout << "q = " << d << '\n';
+	std::cout << "r = " << u % v << '\n';
+	return 0;
+
 	std::vector<uint32_t> v1;
 	std::vector<uint32_t> v2;
 

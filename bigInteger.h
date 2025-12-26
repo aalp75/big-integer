@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <cstdint>
+#include <limits>
 
 class BigInteger {
 
@@ -22,9 +23,16 @@ private:
 	inline static constexpr int64_t KARATSUBA_THRESHOLD = 80;
 
 	// private method
+public: // public for debug purpose
 
 	bool isNull() const;
 	void printWords() const;
+	std::size_t numberOfWords() const;
+
+	template <typename T>
+	void addWord(T digit) {
+		m_words.push_back(static_cast<uint32_t>(digit));
+	}
 
 public:
 
@@ -39,17 +47,12 @@ public:
 
 	BigInteger(const std::vector<uint32_t>& input);
 	BigInteger(std::string s);
-	BigInteger(const char* s);
-	
+	//BigInteger(const char* s); // to be implemented
 
 	// Observers & helpers
-	std::size_t numberOfWords() const;
+	
 	BigInteger abs() const;
 	std::string toString() const;
-	template <typename T>
-	void addWord(T digit) {
-		m_words.push_back(static_cast<uint32_t>(digit));
-	}
 	
 	BigInteger(const BigInteger& other); // copy constructor
     BigInteger& operator=(const BigInteger& other); // copy assignement

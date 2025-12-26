@@ -7,6 +7,7 @@
 #include <cstdint> // for fixed-width integer types (uint32_t & uint64_t)
 #include <utility> // std::pair and std::move
 #include <cstdlib> // std::abs
+#include <bit> // std::countl_zero
 
 #include "bigInteger.h"
 
@@ -98,7 +99,7 @@ BigInteger::BigInteger(std::string s) {
 
 	std::string sCleaned;
 
-	for (auto c : s) {
+	for (char c : s) {
 		if (std::isdigit(c)) sCleaned += c;
 	}
 
@@ -455,10 +456,10 @@ BigInteger karatsubaMultiplication(const BigInteger& x, const BigInteger& y) {
 /** 
  * Division on |x| / |y|
  * 
- * Condition: v has only 1 digit; i.e. it's less or equal than B (2^32)
+ * Condition: y has only 1 digit; i.e. it's less or equal than BASE (2^32)
  *  
  * Perform the short division algorithm:
- * - loop on each digits of u
+ * - loop on each digits of x
  * - perform the long division when it's able and store the result
  * 
  * Return: pair<BigInteger, BigInteger> = {quotient, remainder}
@@ -467,14 +468,14 @@ BigInteger karatsubaMultiplication(const BigInteger& x, const BigInteger& y) {
  * 
  */
 
-std::pair<BigInteger, BigInteger> shortDivision(const BigInteger& u, const BigInteger& v) {
+std::pair<BigInteger, BigInteger> shortDivision(const BigInteger& x, const BigInteger& y) {
 	std::vector<uint32_t> quotient;
 
-	uint64_t divisor = v.m_words[0];
+	uint64_t divisor = y.m_words[0];
 	uint64_t remainder = 0;
 
-	for (std::size_t i = 0; i < u.numberOfWords(); i++) {
-		remainder = remainder * BigInteger::BASE + u.m_words[i];
+	for (std::size_t i = 0; i < x.numberOfWords(); i++) {
+		remainder = remainder * BigInteger::BASE + x.m_words[i];
 		uint64_t q = remainder / divisor;
 		quotient.push_back(static_cast<uint32_t>(q));
 		remainder %= divisor;
@@ -486,48 +487,47 @@ std::pair<BigInteger, BigInteger> shortDivision(const BigInteger& u, const BigIn
 /** 
  * Knuth Division Algorithm D Division (from TAOCP Volume 2 4.3.1) 
  * 
- * Condition: v != 0
+ * Condition: y != 0
  * 
  * Return: pair<BigInteger, BigInteger> = {quotient, remainder}
  * 
- * Complexity = O(u.numberOfWords() * v.numberOfWords())
+ * Complexity = O(x.numberOfWords() * y.numberOfWords())
  *  
 */
 
-std::pair<BigInteger, BigInteger> divideAndRemainder(const BigInteger& u_init, const BigInteger& v_init) {
+std::pair<BigInteger, BigInteger> divideAndRemainder(const BigInteger& x, const BigInteger& y) {
 
-	if (v_init.isNull()) {
+	if (y.isNull()) {
 		throw std::runtime_error("BigInteger: division by zero");
 	}
 
 	std::vector<uint32_t> quotient;
 
-	BigInteger u(u_init);
-	BigInteger v(v_init);
+	// perform integer division
+	if (x.numberOfWords() == 1 && y.numberOfWords() == 1) {
 
-	// perform int division
-	if (u.numberOfWords() == 1 && v.numberOfWords() == 1) {
-
-		uint64_t q = u.m_words[0] / v.m_words[0];
-		uint64_t r =  u.m_words[0] % v.m_words[0];
+		uint64_t q = x.m_words[0] / y.m_words[0];
+		uint64_t r = x.m_words[0] % y.m_words[0];
 		return {BigInteger(q), BigInteger(r)};
 	}
 
-	// perform short division
-	if (v.numberOfWords() == 1) {
-		return shortDivision(u, v);
+	// perform short division algorithm
+	if (y.numberOfWords() == 1) {
+		return shortDivision(x, y);
 	}
 
-	// from now on n >= 2
+	// from now on both numbers have at least 2 words length
+
+	BigInteger u(x);
+	BigInteger v(y);
 
 	std::size_t n = v.numberOfWords();
 	std::size_t m = u.numberOfWords() - n;
 
 	// D1 [Normalize] Ensure that v_{n - 1} > BASE / 2
-	// shift the digits to the left so the MSB is set to 1
+	// shift the digits to the left so the most significant bit of the 1-st word is set to 1
 
-	// TODO: needs to be made more robust
-	uint64_t d = 1ll << __builtin_clz(v.m_words[0]);
+	uint32_t d = 1ll << std::countl_zero(v.m_words[0]);
 
 	u = multiplicationAbsolute(u, BigInteger(d));
 	v = multiplicationAbsolute(v, BigInteger(d));
@@ -576,7 +576,6 @@ std::pair<BigInteger, BigInteger> divideAndRemainder(const BigInteger& u_init, c
 			if (r_hat >= BigInteger::BASE) break;
 		}
 
-
 		// D4 [Multiply and substract]
 		BigInteger sub = BigInteger(q_hat) * v;
 
@@ -586,8 +585,8 @@ std::pair<BigInteger, BigInteger> divideAndRemainder(const BigInteger& u_init, c
 		}
 		else { // D6 [Add Back]
 			// this step is very rare, it only happends with probability 1 / (2 ^ 31)
-			// specific tests need to be written for this case
-			std::cout << "\n\n\n[Add Back]\n\n\n";
+			// specific tests are written for this step
+			std::cout << "D6 [Add Back]\n";
 			q_hat--;
 			curr += v;
 			curr -= sub;
