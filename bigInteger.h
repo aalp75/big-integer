@@ -8,13 +8,13 @@
 
 class BigInteger {
 
-// Representation: sign and words in base B (2^32), Most Significant Bit first
+// Representation: sign and words in base B (2^32), Most-Significant-Bit first
 // Zero is invariant: m_sign = 0 && m_words empty
 
 private:
 
 	int m_sign; // -1, 0, +1
-	std::vector<uint32_t> m_words; // MSB-first (Most Significant Bit)
+	std::vector<uint32_t> m_words; // Most-Significant-Bit first
 
 	inline static constexpr int64_t SHIFT = 32;
 	inline static constexpr int64_t BASE = 1LL << SHIFT;
@@ -34,6 +34,7 @@ public:
 
 	BigInteger(std::string s);
 
+	// TODO: change to vector<uint32_t>
 	template <typename T>
 	BigInteger(const std::vector<T>& input) {
 		m_sign = 1;

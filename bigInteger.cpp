@@ -93,18 +93,24 @@ BigInteger::BigInteger(std::string s) {
 	}
 
 	std::size_t n = s.size();
-	std::vector<uint64_t> digits;
+	std::vector<uint32_t> digits;
 	digits.push_back(static_cast<uint32_t>(s[0] - '0'));
 	for (std::size_t i = 1; i < n; i++) {
 
 		uint64_t carry = static_cast<uint64_t>(s[i] - '0');
 
 		for (std::size_t j = 0; j < digits.size(); j++) {
-			digits[j] = digits[j] * 10 + carry;
+			uint64_t val = digits[j];
+			val = val * 10 + carry;
+			//digits[j] = digits[j] * 10 + carry;
 			carry = 0;
-			if (digits[j] >= BASE) {
-				carry = digits[j] / BASE;
-				digits[j] = digits[j] % BASE;
+			if (val >= BASE) {
+				carry = val / BASE;
+				digits[j] = static_cast<uint32_t>(val % BASE);
+			}
+			else {
+				carry = 0;
+				digits[j] = static_cast<uint32_t>(val);
 			}
 		}
 
@@ -114,10 +120,7 @@ BigInteger::BigInteger(std::string s) {
 	}
 
 	std::reverse(digits.begin(), digits.end());
-
-	for (auto e : digits) {
-		addWord(e);
-	}
+	m_words = digits;
 }
 
 // ---------------- Copy, Move & Destructor ----------------
@@ -234,7 +237,7 @@ bool BigInteger::isNull() const {
  * - add them 
  * - roll over a carry
  * 
- * Returns a BigInteger
+ * Return: BigInteger result of |x| + |y|
  * 
  * Complexity = O(max(x.numberOfWords(), y.numberOfWords()))
  *  
@@ -274,7 +277,7 @@ BigInteger additionAbsolute(const BigInteger& x, const BigInteger& y) {
  * - substract y[i] from x[i] 
  * - roll over a borrow if the result of the above step is negative
  * 
- * Returns a BigInteger
+ * Return: BigInteger result of |x| - |y|
  * 
  * Complexity = O(max(x.numberOfWords(), y.numberOfWords()))
  */
@@ -318,7 +321,7 @@ BigInteger substractionAbsolute(const BigInteger& x, const BigInteger& y) {
  * - perform the multiplication of each pair of digits
  * - roll over a carry
  * 
- * Returns a BigInteger
+ * Return: BigInteger result of |x| * |y|
  * 
  * Complexity = O(x.numberOfWords() * y.numberOfWords())
  */
@@ -366,6 +369,8 @@ BigInteger multiplicationAbsolute(const BigInteger& x, const BigInteger& y) {
  * - x * y = z2 * B ^ (2 * middle) + z1 + B ^ middle + z0
  * - z2 = xHigh * yHigh, z0 = xLow * yHigh ans z1 = (xLow + xHigh) * (yLow + yHigh) - z2 - z0
  * - 3 small multiplications instead of 4 for classical schoolbook multplication
+ * 
+ *  * Return: BigInteger result of |x| * |y|
  * 
  * Complexity = O(max(x.numberOfWords(), y.numberOfWords() ) ^ log2(3)) ~ n ^ 1.59
  *  
@@ -435,7 +440,7 @@ BigInteger karatsubaMultiplication(const BigInteger& x, const BigInteger& y) {
  * - loop on each digits of u
  * - perform the long division when it's able and store the result
  * 
- * Returns a pair<BigInteger, BigInteger> = quotient, remainder
+ * Return: pair<BigInteger, BigInteger> = {quotient, remainder}
  * 
  * Complexity = O(u.numberOfWords()) 
  * 
@@ -458,9 +463,11 @@ std::pair<BigInteger, BigInteger> shortDivision(const BigInteger& u, const BigIn
 }
 
 /** 
- * Knuth Division Algorithm D (from TAOCP Vol. 2 §4.3.1)Division
+ * Knuth Division Algorithm D Division (from TAOCP Volume 2 4.3.1) 
  * 
  * Condition: v != 0
+ * 
+ * Return: pair<BigInteger, BigInteger> = {quotient, remainder}
  * 
  * Complexity = O(u.numberOfWords() * v.numberOfWords())
  *  
