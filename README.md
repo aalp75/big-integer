@@ -35,16 +35,16 @@ Let **w** be the number of 32-bit words in the internal representation.
   ```
 - Compile/link the implementation file bigInteger.cpp
     ```bash 
-    g++ -std=c++23 -o main.cpp bigInteger.cpp
+    g++ -std=c++23 main.cpp bigInteger.cpp -o main.out
     ```
 
 ---
 
-## Code Example (main.cpp)
+## Code Example (example.cpp)
 
 ```cpp
 #include <iostream>
-#include "BigInteger.h"
+#include "bigInteger.h"
 
 int main() {
     BigInteger b1("3141592653589793238462643");
