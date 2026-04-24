@@ -65,3 +65,7 @@ int main() {
     return 0;
 }
 ```
+
+## References
+
+Donald E. Knuth, *The Art of Computer Programming*, Volume 2, Chapter 4
